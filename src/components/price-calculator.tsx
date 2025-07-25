@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -146,20 +147,18 @@ export default function PriceCalculator() {
     const orderFeePercent = platformCategoryData.orderFee || 0;
 
     const totalOtherCosts = otherCosts.reduce((sum, current) => sum + (current.value || 0), 0);
-    // Include discount as part of the base cost to ensure profit margin is calculated correctly and covered.
-    const totalCost = cost + totalOtherCosts + discount;
+    const totalCost = cost + totalOtherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
-    // Formula: Selling Price = (Total Cost + Desired Profit) / (1 - Total Fee Percentage)
-    // The "Total Cost" here includes the discount, ensuring it's covered by the final price.
-    const sellingPrice = (totalCost + profitAmount) / (1 - (commissionPercent / 100) - (orderFeePercent / 100));
+    // Formula: Selling Price = (Total Cost + Desired Profit + Discount) / (1 - Total Fee Percentage)
+    const sellingPrice = (totalCost + profitAmount + discount) / (1 - (commissionPercent / 100) - (orderFeePercent / 100));
 
     // For calculation and display purposes, the "price" the fee is based on is the selling price minus the seller's discount
     const priceForFeeCalculation = sellingPrice - discount;
     const commissionAmount = priceForFeeCalculation * (commissionPercent / 100);
 
-    // TikTok order fee is on the final selling price
-    const orderFeeAmount = sellingPrice * (orderFeePercent / 100);
+    // TikTok order fee is on the final selling price after discount
+    const orderFeeAmount = priceForFeeCalculation * (orderFeePercent / 100);
     const totalPlatformFee = commissionAmount + orderFeeAmount;
     
     const finalProfit = sellingPrice - cost - totalOtherCosts - discount - totalPlatformFee;
@@ -220,28 +219,12 @@ export default function PriceCalculator() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="cost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>2. ราคาต้นทุน</FormLabel>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
-                        <FormControl>
-                          <Input type="number" placeholder="100" className="pl-8" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                  <FormField
                   control={form.control}
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                       <FormLabel>3. ประเภท/หมวดหมู่</FormLabel>
+                       <FormLabel>2. ประเภท/หมวดหมู่</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatform}>
                         <FormControl>
                           <SelectTrigger>
@@ -269,9 +252,40 @@ export default function PriceCalculator() {
                     </FormItem>
                   )}
                 />
-                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <FormLabel>4. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="cost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>3. ราคาต้นทุน</FormLabel>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
+                        <FormControl>
+                          <Input type="number" placeholder="100" className="pl-8" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="profitMargin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>4. กำไรที่ต้องการ (%)</FormLabel>
+                      <div className="relative">
+                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <FormControl>
+                          <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <div className="md:col-span-2 space-y-4">
+                    <FormLabel>5. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
                     {fields.map((field, index) => (
                       <div key={field.id} className="flex items-center gap-2">
                         <FormField
@@ -316,12 +330,12 @@ export default function PriceCalculator() {
                       เพิ่มรายการค่าใช้จ่าย
                     </Button>
                   </div>
-                  <FormField
+                   <FormField
                     control={form.control}
                     name="discount"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>5. ส่วนลด (บาท)</FormLabel>
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>6. ส่วนลด (บาท)</FormLabel>
                         <div className="relative">
                           <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <FormControl>
@@ -329,29 +343,12 @@ export default function PriceCalculator() {
                           </FormControl>
                         </div>
                         <FormDescription>
-                          ส่วนลดนี้จะถูกบวกเข้าไปในราคาขาย
+                          ส่วนลดนี้จะถูกบวกเข้าไปในราคาขายเพื่อรักษากำไร
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="profitMargin"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>6. กำไรที่ต้องการ (เปอร์เซ็นต์จากต้นทุน)</FormLabel>
-                      <div className="relative">
-                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <FormControl>
-                          <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
               <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>
                 {isLoading ? 'กำลังคำนวณ...' : 'คำนวณราคา'}
