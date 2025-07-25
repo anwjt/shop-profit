@@ -63,6 +63,7 @@ Your task is to analyze a product and suggest a "psychological" and "competitive
 2.  **Simulate Competitor Analysis:** Based on the product information, estimate the typical price range for similar products on the given platform ({{{platform}}}).
 3.  **Develop Pricing Strategy:**
     - Decide if a promotional price would be beneficial. If the current price is already very competitive and well-priced, you can choose not to suggest a new one.
+    - **CRITICAL LOGIC:** If you determine the {{{currentPrice}}} is too high and suggest a lower price, the 'suggestedPrice' **MUST BE LOWER** than the 'currentPrice'. Do not suggest a higher price while reasoning that the current price is too high.
     - If you suggest a price, it must be competitive with other sellers on the platform.
     - The price should be psychologically appealing (e.g., ending in .99, .95, or a round number like 99 or 100).
     - **Crucially, the suggested price must NOT be lower than the product cost ({{{cost}}}).**
@@ -85,5 +86,3 @@ const suggestPriceFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
