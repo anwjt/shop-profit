@@ -71,7 +71,8 @@ Your task is to analyze a product and suggest a "psychological" promotional pric
     - Decide if a promotional price would be beneficial. If the current price is already very competitive and well-priced, you can choose not to suggest a new one.
     - **CRITICAL LOGIC:** If you determine the {{{currentPrice}}} is too high and suggest a lower price, the 'suggestedPrice' **MUST BE LOWER** than the 'currentPrice'. Do not suggest a higher price while reasoning that the current price is too high.
     - The price should be psychologically appealing. **Crucially, round the final suggested price to a common psychological pricing tier, such as ending in .99, .95, or a round number like 99 or 100.**
-    - **Crucially, the suggested price must NOT be lower than the product cost ({{{cost}}}).**
+    - **ULTRA-CRITICAL RULE:** The final 'suggestedPrice' **MUST NOT, under any circumstances, be lower than the product cost ({{{cost}}}).** This is the most important rule. If your psychological price calculation results in a price lower than the cost, you must either adjust it to be equal to or greater than the cost, or decide not to suggest a price at all by setting 'shouldSuggest' to false.
+
 3.  **Formulate Response:**
     - Provide a brief, insightful reasoning for your suggestion. For example, "For a product like this on {{{platform}}}, a price around 199.00 THB is highly competitive. Rounding down to 199.00 makes the offer attractive and stands out." or "The current price is already excellent, no change is needed."
     - **The reasoning must be in the Thai language.**
