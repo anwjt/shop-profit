@@ -68,6 +68,7 @@ Your task is to analyze a product and suggest a "psychological" and "competitive
     - **Crucially, the suggested price must NOT be lower than the product cost ({{{cost}}}).**
 4.  **Formulate Response:**
     - Provide a brief, insightful reasoning for your suggestion. For example, "For a product like this on {{{platform}}}, a price around 199.00 THB is highly competitive. Rounding down to 199.00 makes the offer attractive and stands out." or "The current price is already excellent, no change is needed."
+    - **The reasoning must be in the Thai language.**
     - Based on your analysis, decide whether to make a suggestion and fill out the response.
 `,
 });
