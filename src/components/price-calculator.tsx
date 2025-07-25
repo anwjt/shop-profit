@@ -21,6 +21,7 @@ import {
   CreditCard,
   Sparkles,
   BookMarked,
+  RotateCcw,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -200,6 +201,11 @@ export default function PriceCalculator() {
     setIsLoading(false);
   }
 
+  const handleClear = () => {
+    form.reset();
+    setResult(null);
+  };
+
   return (
     <div className="w-full max-w-4xl space-y-4">
       <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20 relative">
@@ -323,7 +329,15 @@ export default function PriceCalculator() {
                    <FormField control={form.control} name="discount" render={({ field }) => (<FormItem><FormLabel>6. ส่วนลดร้านค้า (บาท)</FormLabel><div className="relative"><BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกส่วนลด" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ส่วนลดที่ร้านค้าเป็นผู้รับผิดชอบทั้งหมด (เช่น คูปองส่วนลดที่ร้านสร้างเอง)</FormDescription><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="affiliateCommission" render={({ field }) => (<FormItem><FormLabel>7. ค่าคอม Affiliate (%)</FormLabel><div className="relative"><Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย</FormDescription><FormMessage /></FormItem>)} />
               </div>
-              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>{isLoading ? 'กำลังคำนวณ...' : 'คำนวณราคา'}</Button>
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button type="button" variant="outline" className="w-full" onClick={handleClear}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    ล้างข้อมูล
+                </Button>
+                <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>
+                  {isLoading ? 'กำลังคำนวณ...' : 'คำนวณราคา'}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>
