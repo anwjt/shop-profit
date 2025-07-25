@@ -20,6 +20,7 @@ import {
   Handshake,
   CreditCard,
   Sparkles,
+  Lightbulb,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { suggestPrice, SuggestPriceOutput } from '@/ai/flows/suggest-price-flow';
 
 
 const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number, paymentFee?: number } } } = {
@@ -111,12 +113,15 @@ type CalculationResult = {
   discount: number;
   shopeeCreditCardPrice?: number;
   shopeeSPayLaterPrice?: number;
+  totalCost: number;
 };
 
 
 export default function PriceCalculator() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<SuggestPriceOutput | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   
   const form = useForm<FormValues>({
@@ -163,6 +168,7 @@ export default function PriceCalculator() {
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
     setResult(null);
+    setSuggestion(null);
 
     await new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -243,11 +249,31 @@ export default function PriceCalculator() {
       paymentFeePercent,
       priceForFeeCalculation,
       discount,
+      totalCost,
       ...shopeePrices,
     };
     setResult(newResult);
     setIsLoading(false);
   }
+
+  const handleSuggestPrice = async () => {
+    if (!result) return;
+    setIsSuggesting(true);
+    setSuggestion(null);
+    try {
+      const suggestionResult = await suggestPrice({
+        currentPrice: result.sellingPrice,
+        cost: result.totalCost,
+        profit: result.profit,
+      });
+      setSuggestion(suggestionResult);
+    } catch (error) {
+      console.error("Error suggesting price:", error);
+      // You can add a toast notification here to inform the user about the error.
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
 
   const getCategoryLabel = (platform: string, categoryKey: string) => {
     return PLATFORM_FEES[platform]?.[categoryKey]?.name || categoryKey;
@@ -527,12 +553,72 @@ export default function PriceCalculator() {
                           ราคานี้เป็นการคำนวณเบื้องต้น อาจมีการเปลี่ยนแปลงจากค่าธรรมเนียมส่งเสริมการขาย, ค่าขนส่ง, หรือส่วนลดอื่นๆ ของแพลตฟอร์ม
                       </AlertDescription>
                   </Alert>
+
+                  {!suggestion && (
+                     <Button 
+                        variant="outline" 
+                        className="w-full mt-4" 
+                        onClick={handleSuggestPrice} 
+                        disabled={isSuggesting}
+                      >
+                        <Lightbulb className="mr-2 h-4 w-4" />
+                        {isSuggesting ? 'กำลังรับข้อเสนอแนะ...' : 'รับข้อเสนอแนะราคาโปรโมชั่น'}
+                      </Button>
+                  )}
                 </>
               )
             )}
           </CardContent>
         </Card>
       )}
+
+      {isSuggesting && (
+         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
+            <CardHeader>
+                <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
+                    <Lightbulb className="h-6 w-6 text-yellow-500" />
+                    กำลังวิเคราะห์ราคา...
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="flex justify-center items-center h-24">
+               <Skeleton className="h-8 w-3/4 mx-auto" />
+            </CardContent>
+        </Card>
+      )}
+
+      {suggestion && suggestion.shouldSuggest && suggestion.suggestedPrice && (
+         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
+            <CardHeader>
+                <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
+                    <Lightbulb className="h-6 w-6 text-yellow-500" />
+                    ราคาโปรโมชั่นที่แนะนำ
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+                 <p className="text-5xl font-bold text-primary tracking-tight">
+                    {suggestion.suggestedPrice.toFixed(2)}
+                 </p>
+                 {suggestion.reasoning && (
+                    <Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-sm">
+                        <Info className="h-4 w-4" />
+                        <AlertTitle>เหตุผล</AlertTitle>
+                        <AlertDescription>
+                            {suggestion.reasoning}
+                        </AlertDescription>
+                    </Alert>
+                 )}
+            </CardContent>
+        </Card>
+      )}
+
+      {suggestion && !suggestion.shouldSuggest && (
+         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
+            <CardContent className="p-6 text-center">
+                 <p className="text-muted-foreground">AI วิเคราะห์แล้วพบว่าราคาปัจจุบันเหมาะสมดีแล้ว จึงไม่มีข้อเสนอแนะเพิ่มเติม</p>
+            </CardContent>
+        </Card>
+      )}
+
 
       {result && result.platform === 'shopee' && (
         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
@@ -576,10 +662,4 @@ export default function PriceCalculator() {
       )}
     </div>
   );
-
-    
-
-
-
-
-    
+}

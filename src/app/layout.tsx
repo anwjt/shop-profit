@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { ai } from '@/ai/genkit';
 
 export const metadata: Metadata = {
   title: 'Shop Profit Calc',
@@ -12,6 +13,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  ai.init();
   return (
     <html lang="en">
       <head>
