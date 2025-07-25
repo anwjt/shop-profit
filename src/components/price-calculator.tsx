@@ -20,7 +20,9 @@ import {
   Handshake,
   CreditCard,
   Sparkles,
+  BookMarked,
 } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -200,7 +202,14 @@ export default function PriceCalculator() {
 
   return (
     <div className="w-full max-w-4xl space-y-4">
-      <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
+      <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20 relative">
+         <div className="absolute top-4 right-4">
+            <Button variant="ghost" size="icon" asChild>
+                <Link href="/docs" title="คู่มือการใช้งาน">
+                    <BookMarked className="h-5 w-5 text-muted-foreground" />
+                </Link>
+            </Button>
+        </div>
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
             <Calculator className="w-8 h-8" />
