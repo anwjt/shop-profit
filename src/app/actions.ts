@@ -1,3 +1,4 @@
+
 'use server';
 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -8,9 +9,9 @@ export async function saveApiKey(uid: string, apiKey: string) {
     const userDocRef = doc(firestore, 'users', uid);
     await setDoc(userDocRef, { apiKey }, { merge: true });
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving API key:', error);
-    return { success: false, error: 'Could not save API key.' };
+    return { success: false, error: 'Could not save API key.', details: error.message };
   }
 }
 
@@ -22,7 +23,7 @@ export async function getApiKey(uid: string): Promise<string | null> {
       return docSnap.data()?.apiKey || null;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting API key:', error);
     return null;
   }

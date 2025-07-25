@@ -48,7 +48,13 @@ const SuggestPriceOutputSchema = z.object({
 export type SuggestPriceOutput = z.infer<typeof SuggestPriceOutputSchema>;
 
 export async function suggestPrice(input: SuggestPriceInput): Promise<SuggestPriceOutput> {
-  return suggestPriceFlow(input);
+  try {
+    return await suggestPriceFlow(input);
+  } catch (e: any) {
+    console.error('Error in suggestPrice flow:', e);
+    // Re-throw a more user-friendly error or a structured error
+    throw new Error(`AI suggestion failed: ${e.message || 'An unexpected error occurred.'}`);
+  }
 }
 
 const suggestPricePrompt = ai.definePrompt({

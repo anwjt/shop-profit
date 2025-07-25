@@ -228,12 +228,12 @@ export default function PriceCalculator() {
         // If user has key, proceed to suggestion form
         setIsSuggestDialogOpen(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in with Google:", error);
       toast({
         variant: 'destructive',
         title: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
-        description: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง',
+        description: `ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ${error.message}`,
       });
     }
   };
@@ -241,8 +241,13 @@ export default function PriceCalculator() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing out:", error);
+      toast({
+        variant: 'destructive',
+        title: 'เกิดข้อผิดพลาดในการออกจากระบบ',
+        description: error.message,
+      });
     }
   };
 
@@ -262,7 +267,7 @@ export default function PriceCalculator() {
       toast({
         variant: 'destructive',
         title: 'เกิดข้อผิดพลาด',
-        description: result.error,
+        description: `${result.error} ${result.details ? `(${result.details})` : ''}`,
       });
     }
   };
@@ -362,9 +367,9 @@ export default function PriceCalculator() {
         profit: result.profit,
       });
       setSuggestion(suggestionResult);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error suggesting price:", error);
-      toast({ variant: 'destructive', title: 'AI Error', description: 'เกิดข้อผิดพลาดขณะเรียกใช้ AI' });
+      toast({ variant: 'destructive', title: 'AI Error', description: `เกิดข้อผิดพลาดขณะเรียกใช้ AI: ${error.message}` });
     } finally {
       setIsSuggesting(false);
     }
