@@ -22,12 +22,6 @@ const SuggestPriceInputSchema = z.object({
 });
 export type SuggestPriceInput = z.infer<typeof SuggestPriceInputSchema>;
 
-const CompetitorAnalysisSchema = z.object({
-  productName: z.string().describe("The name of the competitor's product."),
-  price: z.number().describe("The competitor's price."),
-  notes: z.string().describe("Brief notes about the competitor's offering."),
-});
-
 const SuggestPriceOutputSchema = z.object({
   shouldSuggest: z
     .boolean()
@@ -40,10 +34,6 @@ const SuggestPriceOutputSchema = z.object({
     .string()
     .optional()
     .describe('A brief explanation for the suggestion.'),
-   competitorAnalysis: z
-    .array(CompetitorAnalysisSchema)
-    .optional()
-    .describe('A simulated analysis of the top 3 competitors in the market.'),
 });
 export type SuggestPriceOutput = z.infer<typeof SuggestPriceOutputSchema>;
 
@@ -63,7 +53,7 @@ const suggestPricePrompt = ai.definePrompt({
   input: { schema: SuggestPriceInputSchema },
   output: { schema: SuggestPriceOutputSchema },
   prompt: `You are an expert Thai e-commerce pricing strategist.
-Your task is to analyze a product and suggest a "psychological" and "competitive" promotional price based on the user's data. You must also analyze competitor pricing for similar items on the specified platform.
+Your task is to analyze a product and suggest a "psychological" promotional price based on the user's data.
 
 **Product Information:**
 - Product Name: {{{productName}}}
@@ -77,17 +67,15 @@ Your task is to analyze a product and suggest a "psychological" and "competitive
 
 **Your Analysis Steps:**
 1.  **Understand the Product:** Analyze the name and description to understand the product's value and target audience.
-2.  **Simulate Competitor Analysis:** Based on the product information, estimate the typical price range for similar products on the given platform ({{{platform}}}). Create a list of 3 simulated competitor products with their estimated prices and brief notes. This should be a realistic market simulation.
-3.  **Develop Pricing Strategy:**
+2.  **Develop Pricing Strategy:**
     - Decide if a promotional price would be beneficial. If the current price is already very competitive and well-priced, you can choose not to suggest a new one.
     - **CRITICAL LOGIC:** If you determine the {{{currentPrice}}} is too high and suggest a lower price, the 'suggestedPrice' **MUST BE LOWER** than the 'currentPrice'. Do not suggest a higher price while reasoning that the current price is too high.
-    - If you suggest a price, it must be competitive with other sellers on the platform (based on your simulated analysis).
     - The price should be psychologically appealing. **Crucially, round the final suggested price to a common psychological pricing tier, such as ending in .99, .95, or a round number like 99 or 100.**
     - **Crucially, the suggested price must NOT be lower than the product cost ({{{cost}}}).**
-4.  **Formulate Response:**
+3.  **Formulate Response:**
     - Provide a brief, insightful reasoning for your suggestion. For example, "For a product like this on {{{platform}}}, a price around 199.00 THB is highly competitive. Rounding down to 199.00 makes the offer attractive and stands out." or "The current price is already excellent, no change is needed."
     - **The reasoning must be in the Thai language.**
-    - Based on your analysis, decide whether to make a suggestion and fill out the response, including the simulated competitor analysis.
+    - Based on your analysis, decide whether to make a suggestion and fill out the response.
 `,
 });
 

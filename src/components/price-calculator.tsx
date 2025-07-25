@@ -30,8 +30,7 @@ import {
 } from 'lucide-react';
 import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 
-import { auth, firestore } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth } from '@/lib/firebase';
 import { saveApiKey, getApiKey } from '@/app/actions';
 
 import { Button } from '@/components/ui/button';
@@ -50,7 +49,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -413,44 +411,6 @@ export default function PriceCalculator() {
     )
   }
 
-  const CompetitorAnalysisCard = () => {
-    if (!suggestion || !suggestion.competitorAnalysis || suggestion.competitorAnalysis.length === 0) {
-      return null;
-    }
-    return (
-      <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
-        <CardHeader>
-          <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
-            <BarChart className="h-6 w-6 text-blue-500" />
-            วิเคราะห์คู่แข่ง (จำลอง)
-          </CardTitle>
-          <CardDescription className="text-center">
-            ข้อมูลราคาจากคู่แข่งที่ AI จำลองขึ้นมาเพื่อประกอบการตัดสินใจ
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {suggestion.competitorAnalysis.map((competitor, index) => (
-              <div key={index} className="p-4 bg-muted/50 rounded-lg flex items-start gap-4">
-                <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                  {index + 1}
-                </div>
-                <div className="flex-grow">
-                  <p className="font-semibold text-foreground">{competitor.productName}</p>
-                  <p className="text-sm text-muted-foreground">{competitor.notes}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-primary">{competitor.price.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">ราคา</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
   return (
     <div className="w-full max-w-4xl space-y-4">
       <div className="flex justify-end p-2">
@@ -669,8 +629,6 @@ export default function PriceCalculator() {
         </Card>
       )}
       
-      <CompetitorAnalysisCard />
-
       {result && result.platform === 'shopee' && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Sparkles className="h-6 w-6 text-yellow-500" />ราคาแนะนำสำหรับช่องทางชำระเงินเพิ่มเติม (Shopee)</CardTitle><CardDescription className="text-center">ราคาโดยประมาณเมื่อลูกค้าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)</CardDescription></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="text-center p-6 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต (ผ่อนชำระ)</p><p className="text-4xl font-bold text-primary tracking-tight">{result.shopeeCreditCardPrice?.toFixed(2)}</p></div><div className="text-center p-6 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p><p className="text-4xl font-bold text-primary tracking-tight">{result.shopeeSPayLaterPrice?.toFixed(2)}</p></div><div className="md:col-span-2"><Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-xs"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคาที่แสดงเป็นเพียง **การประมาณการ** โดยใช้อัตราค่าธรรมเนียมสูงสุด และยัง **ไม่รวมค่าขนส่ง** หรือ **ส่วนลดที่ Shopee รับผิดชอบ** ซึ่งอาจส่งผลให้ราคาจริงมีการเปลี่ยนแปลงได้</AlertDescription></Alert></div></CardContent></Card>)}
       
       <Dialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen}>
