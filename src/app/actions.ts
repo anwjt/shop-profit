@@ -11,7 +11,7 @@ export async function saveApiKey(uid: string, apiKey: string) {
     return { success: true };
   } catch (error: any) {
     console.error('Error saving API key:', error);
-    return { success: false, error: 'Could not save API key.', details: error.message };
+    return { success: false, error: 'Could not save API key.', details: `${error.message} \n ${error.stack}` };
   }
 }
 

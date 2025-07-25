@@ -53,7 +53,7 @@ export async function suggestPrice(input: SuggestPriceInput): Promise<SuggestPri
   } catch (e: any) {
     console.error('Error in suggestPrice flow:', e);
     // Re-throw a more user-friendly error or a structured error
-    throw new Error(`AI suggestion failed: ${e.message || 'An unexpected error occurred.'}`);
+    throw new Error(`AI suggestion failed: ${e.message || 'An unexpected error occurred.'} \n ${e.stack}`);
   }
 }
 
@@ -82,7 +82,7 @@ Your task is to analyze a product and suggest a "psychological" and "competitive
     - Decide if a promotional price would be beneficial. If the current price is already very competitive and well-priced, you can choose not to suggest a new one.
     - **CRITICAL LOGIC:** If you determine the {{{currentPrice}}} is too high and suggest a lower price, the 'suggestedPrice' **MUST BE LOWER** than the 'currentPrice'. Do not suggest a higher price while reasoning that the current price is too high.
     - If you suggest a price, it must be competitive with other sellers on the platform (based on your simulated analysis).
-    - The price should be psychologically appealing (e.g., ending in .99, .95, or a round number like 99 or 100).
+    - The price should be psychologically appealing. **Crucially, round the final suggested price to a common psychological pricing tier, such as ending in .99, .95, or a round number like 99 or 100.**
     - **Crucially, the suggested price must NOT be lower than the product cost ({{{cost}}}).**
 4.  **Formulate Response:**
     - Provide a brief, insightful reasoning for your suggestion. For example, "For a product like this on {{{platform}}}, a price around 199.00 THB is highly competitive. Rounding down to 199.00 makes the offer attractive and stands out." or "The current price is already excellent, no change is needed."

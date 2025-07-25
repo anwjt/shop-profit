@@ -30,7 +30,8 @@ import {
 } from 'lucide-react';
 import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 
-import { auth } from '@/lib/firebase';
+import { auth, firestore } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { saveApiKey, getApiKey } from '@/app/actions';
 
 import { Button } from '@/components/ui/button';
@@ -233,7 +234,7 @@ export default function PriceCalculator() {
       toast({
         variant: 'destructive',
         title: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
-        description: `ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ${error.message}`,
+        description: `ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ${error.message} \n ${error.stack}`,
       });
     }
   };
@@ -246,7 +247,7 @@ export default function PriceCalculator() {
       toast({
         variant: 'destructive',
         title: 'เกิดข้อผิดพลาดในการออกจากระบบ',
-        description: error.message,
+        description: `${error.message} \n ${error.stack}`,
       });
     }
   };
@@ -369,7 +370,7 @@ export default function PriceCalculator() {
       setSuggestion(suggestionResult);
     } catch (error: any) {
       console.error("Error suggesting price:", error);
-      toast({ variant: 'destructive', title: 'AI Error', description: `เกิดข้อผิดพลาดขณะเรียกใช้ AI: ${error.message}` });
+      toast({ variant: 'destructive', title: 'AI Error', description: `เกิดข้อผิดพลาดขณะเรียกใช้ AI: ${error.message} \n ${error.stack}` });
     } finally {
       setIsSuggesting(false);
     }
@@ -405,7 +406,7 @@ export default function PriceCalculator() {
       );
     }
     return (
-      <Button onClick={handleGoogleSignIn}>
+      <Button onClick={() => setIsAuthDialogOpen(true)}>
         <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-76.4 76.4A119.4 119.4 0 0 0 248 152c-66.6 0-120.9 54.4-120.9 120.9s54.3 120.9 120.9 120.9c47.7 0 88.1-27.1 108.3-65.7H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path></svg>
         เข้าสู่ระบบด้วย Google
       </Button>
