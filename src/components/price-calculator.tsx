@@ -47,8 +47,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 // Platform fees for NON-MALL sellers (approximations, should be verified)
-// These fees are a combination of Transaction fees and any applicable service/commission fees.
-const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number } } } = {
+const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number } } } = {
   shopee: {
     'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 5.35 },
     'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42 },
@@ -62,10 +61,9 @@ const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: numb
     'general': { name: 'สินค้าทั่วไป', fee: 5.35 },
   },
   tiktok: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 7.35 },
-    'fashion': { name: 'สินค้าแฟชั่น', fee: 8.42 },
-    'fmcg': { name: 'สินค้าอุปโภคบริโภค (FMCG)', fee: 8.42 },
-    'other': { name: 'หมวดหมู่อื่นๆ', fee: 8.42 },
+    'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42, orderFee: 3.21 },
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 5.35, orderFee: 3.21 },
+    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 5.35, orderFee: 3.21 },
   },
 };
 
@@ -127,17 +125,31 @@ export default function PriceCalculator() {
         return;
     }
 
-    const platformFeePercent = PLATFORM_FEES[platform][category].fee;
+    const platformCategoryData = PLATFORM_FEES[platform][category];
+    const commissionPercent = platformCategoryData.fee;
+    const orderFeePercent = platformCategoryData.orderFee || 0;
+
     const totalCost = cost + otherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
-    const sellingPrice = (totalCost + profitAmount) / (1 - (platformFeePercent / 100));
-    const platformFeeAmount = sellingPrice * (platformFeePercent / 100);
-    const finalProfit = sellingPrice - totalCost - platformFeeAmount;
+    let sellingPrice = 0;
+    
+    // Different calculation for TikTok
+    if (platform === 'tiktok') {
+        sellingPrice = (totalCost + profitAmount) / (1 - (commissionPercent / 100) - (orderFeePercent / 100));
+    } else {
+        sellingPrice = (totalCost + profitAmount) / (1 - (commissionPercent / 100));
+    }
+
+    const commissionAmount = sellingPrice * (commissionPercent / 100);
+    const orderFeeAmount = sellingPrice * (orderFeePercent / 100);
+    const totalPlatformFee = commissionAmount + orderFeeAmount;
+    
+    const finalProfit = sellingPrice - totalCost - totalPlatformFee;
 
     const newResult = {
       sellingPrice: sellingPrice,
-      platformFeeAmount: platformFeeAmount,
+      platformFeeAmount: totalPlatformFee,
       profit: finalProfit,
     };
     setResult(newResult);
@@ -220,9 +232,12 @@ export default function PriceCalculator() {
                           {categories.map((cat) => {
                             const platformCategory = selectedPlatform ? PLATFORM_FEES[selectedPlatform]?.[cat] : null;
                             if (!platformCategory) return null;
+                            const feeLabel = selectedPlatform === 'tiktok'
+                               ? `~${platformCategory.fee}% + ${platformCategory.orderFee}%`
+                               : `~${platformCategory.fee}%`;
                             return (
                               <SelectItem key={cat} value={cat}>
-                                {platformCategory.name} (ค่าธรรมเนียม ~{platformCategory.fee}%)
+                                {platformCategory.name} (ค่าธรรมเนียม {feeLabel})
                               </SelectItem>
                             )
                           })}
