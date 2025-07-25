@@ -8,12 +8,11 @@ import {
   Calculator,
   DollarSign,
   Percent,
-  Truck,
-  Store,
-  LayoutGrid,
   PlusCircle,
   TrendingUp,
   Wallet,
+  Store,
+  LayoutGrid
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -43,34 +42,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { suggestPsychologicalPrice, SuggestPsychologicalPriceOutput } from '@/ai/flows/suggest-pricing';
+import { Badge } from './ui/badge';
+import { Lightbulb } from 'lucide-react';
 
-// Updated platform fees (approximations, should be verified)
+// Platform fees for NON-MALL sellers (approximations, should be verified)
 const PLATFORM_FEES: { [key: string]: { [key: string]: number } } = {
   shopee: {
-    'non-mall': 4.28, // Transaction Fee 2.14% + Program Fee ~2.14%
-    mall: 7.49, // Commission Fee ~5.35% + Transaction Fee 2.14%
-    electronics: 8.56, // Higher commission for electronics in Mall
-    fashion: 7.49,
-    'health-beauty': 7.49,
-    other: 6.42,
+    'all-categories': 4.28, // Transaction Fee 2.14% + Program Fee ~2.14%
   },
   lazada: {
-    marketplace: 3.21, // Payment Fee 3.21%
-    lazmall: 6.42, // LazMall Commission ~3.21% + Payment Fee 3.21%
-    electronics: 8.56, // Higher commission for electronics in LazMall
-    fashion: 6.42,
-    'health-beauty': 6.42,
-    other: 5.35,
+    'all-categories': 3.21, // Payment Fee 3.21%
   },
   tiktok: {
-    all: 7.35, // Commission Fee 4% + Transaction Fee 3% + VAT
-    electronics: 7.35,
-    fashion: 7.35,
-    'health-beauty': 7.35,
-    other: 7.35,
+    'all-categories': 7.35, // Commission Fee 4% + Transaction Fee ~3.35% (incl. VAT)
   },
 };
-
 
 const formSchema = z.object({
   platform: z.string({ required_error: 'กรุณาเลือกแพลตฟอร์ม' }),
@@ -92,7 +79,7 @@ export default function PriceCalculator() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
-
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -108,8 +95,14 @@ export default function PriceCalculator() {
 
   useEffect(() => {
     if (selectedPlatform && PLATFORM_FEES[selectedPlatform]) {
-      setCategories(Object.keys(PLATFORM_FEES[selectedPlatform]));
-      form.resetField('category');
+      const availableCategories = Object.keys(PLATFORM_FEES[selectedPlatform]);
+      setCategories(availableCategories);
+      // Automatically select the first category if there's only one
+      if (availableCategories.length === 1) {
+        form.setValue('category', availableCategories[0]);
+      } else {
+        form.resetField('category');
+      }
     } else {
       setCategories([]);
     }
@@ -119,16 +112,22 @@ export default function PriceCalculator() {
     setIsLoading(true);
     setResult(null);
 
-    const { cost, profitMargin, otherCosts = 0, platform, category } = values;
-    const platformFeePercent = PLATFORM_FEES[platform][category];
-
-    // Simulate a short delay for better user experience
     await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const { cost, profitMargin, otherCosts = 0, platform, category } = values;
     
+    // Ensure category exists for the platform before proceeding
+    if (!PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
+        console.error("Invalid platform or category selected");
+        setIsLoading(false);
+        // Optionally, set an error state to show in the UI
+        return;
+    }
+
+    const platformFeePercent = PLATFORM_FEES[platform][category];
     const totalCost = cost + otherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
-    // Selling Price = (Total Cost + Desired Profit) / (1 - (Fee Percentage / 100))
     const sellingPrice = (totalCost + profitAmount) / (1 - (platformFeePercent / 100));
     const platformFeeAmount = sellingPrice * (platformFeePercent / 100);
     const finalProfit = sellingPrice - totalCost - platformFeeAmount;
@@ -138,20 +137,13 @@ export default function PriceCalculator() {
       platformFeeAmount: platformFeeAmount,
       profit: finalProfit,
     });
+
     setIsLoading(false);
   }
 
   const getCategoryLabel = (categoryKey: string) => {
     switch (categoryKey) {
-      case 'electronics': return 'อิเล็กทรอนิกส์';
-      case 'fashion': return 'แฟชั่น';
-      case 'health-beauty': return 'สุขภาพและความงาม';
-      case 'non-mall': return 'ร้านค้าทั่วไป (Non-Mall)';
-      case 'mall': return 'ร้านค้าทางการ (Mall)';
-      case 'marketplace': return 'ร้านค้าทั่วไป (Marketplace)';
-      case 'lazmall': return 'ร้านค้าทางการ (LazMall)';
-      case 'all': return 'สินค้าทุกหมวดหมู่';
-      case 'other': return 'อื่นๆ';
+      case 'all-categories': return 'สินค้าทุกหมวดหมู่ (ร้านค้าทั่วไป)';
       default: return categoryKey;
     }
   }
@@ -163,7 +155,7 @@ export default function PriceCalculator() {
           <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
             <Calculator className="w-8 h-8" />
           </div>
-          <CardTitle className="font-headline text-3xl">คำนวณราคาขาย</CardTitle>
+          <CardTitle className="font-headline text-3xl">คำนวณราคาขาย (สำหรับร้านค้าทั่วไป)</CardTitle>
           <CardDescription>
             คำนวณราคาขายสินค้าของคุณเพื่อให้แน่ใจว่าได้กำไรตามที่ต้องการ
           </CardDescription>
@@ -172,13 +164,12 @@ export default function PriceCalculator() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {/* 1. Platform Selection */}
                 <FormField
                   control={form.control}
                   name="platform"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>แพลตฟอร์ม</FormLabel>
+                      <FormLabel>1. เลือกแพลตฟอร์ม</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -196,13 +187,12 @@ export default function PriceCalculator() {
                     </FormItem>
                   )}
                 />
-                {/* 2. Cost Price */}
                 <FormField
                   control={form.control}
                   name="cost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ราคาต้นทุน</FormLabel>
+                      <FormLabel>2. ราคาต้นทุน</FormLabel>
                       <div className="relative">
                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <FormControl>
@@ -213,18 +203,17 @@ export default function PriceCalculator() {
                     </FormItem>
                   )}
                 />
-                {/* 3. Category Selection */}
-                <FormField
+                 <FormField
                   control={form.control}
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>หมวดหมู่สินค้า/ประเภท</FormLabel>
+                       <FormLabel>3. ประเภท/หมวดหมู่</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatform}>
                         <FormControl>
                           <SelectTrigger>
-                            <LayoutGrid className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                            <SelectValue placeholder="เลือกหมวดหมู่/ประเภท" />
+                             <LayoutGrid className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
+                            <SelectValue placeholder="เลือกประเภท" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -239,13 +228,12 @@ export default function PriceCalculator() {
                     </FormItem>
                   )}
                 />
-                {/* 4. Other Costs */}
                  <FormField
                   control={form.control}
                   name="otherCosts"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
+                      <FormLabel>4. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
                       <div className="relative">
                         <PlusCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <FormControl>
@@ -257,13 +245,12 @@ export default function PriceCalculator() {
                     </FormItem>
                   )}
                 />
-                {/* 5. Desired Profit Margin */}
                 <FormField
                   control={form.control}
                   name="profitMargin"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>กำไรที่ต้องการ (เปอร์เซ็นต์จากต้นทุน)</FormLabel>
+                      <FormLabel>5. กำไรที่ต้องการ (เปอร์เซ็นต์จากต้นทุน)</FormLabel>
                       <div className="relative">
                         <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <FormControl>
