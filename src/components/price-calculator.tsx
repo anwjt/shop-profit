@@ -156,7 +156,16 @@ export default function PriceCalculator() {
     
     // Formula: Selling Price = (Total Cost + Desired Profit + Discount) / (1 - Total Fee Percentage - Affiliate Commission %)
     const totalFeePercentage = (commissionPercent / 100) + (orderFeePercent / 100) + (affiliateCommission / 100);
-    const sellingPrice = (totalCost + profitAmount + discount) / (1 - totalFeePercentage);
+    let sellingPrice = 0;
+    if (totalFeePercentage < 1) {
+        sellingPrice = (totalCost + profitAmount + discount) / (1 - totalFeePercentage);
+    } else {
+        // Handle case where total fees are 100% or more, which is not logical
+        console.error("Total fee percentage is 100% or more.");
+        setIsLoading(false);
+        return;
+    }
+
 
     // For calculation and display purposes, the "price" the fee is based on is the selling price minus the seller's discount
     const priceForFeeCalculation = sellingPrice - discount;
@@ -190,7 +199,7 @@ export default function PriceCalculator() {
 
   return (
     <div className="w-full max-w-4xl">
-      <Card className="w-full shadow-2xl">
+      <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
             <Calculator className="w-8 h-8" />
@@ -386,7 +395,7 @@ export default function PriceCalculator() {
       </Card>
 
       {(isLoading || result) && (
-        <Card className="mt-8 w-full shadow-2xl">
+        <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
           <CardHeader>
             <CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle>
           </CardHeader>
@@ -401,7 +410,7 @@ export default function PriceCalculator() {
             ) : (
               result && (
                 <>
-                  <div className="text-center p-6 bg-secondary rounded-lg">
+                  <div className="text-center p-6 bg-muted/50 rounded-lg">
                     <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)</p>
                     <p className="text-5xl font-bold text-primary tracking-tight mt-2">
                       {result.sellingPrice.toFixed(2)}
@@ -440,7 +449,7 @@ export default function PriceCalculator() {
                     </div>
                   )}
 
-                  <Alert variant="default" className="mt-4">
+                  <Alert variant="default" className="mt-4 bg-muted/50 border-transparent">
                       <Info className="h-4 w-4" />
                       <AlertTitle>ข้อควรทราบ</AlertTitle>
                       <AlertDescription>
