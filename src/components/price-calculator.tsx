@@ -10,8 +10,6 @@ import {
   Percent,
   Truck,
   Store,
-  Lightbulb,
-  Sparkles,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -43,8 +41,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getPsychologicalPriceSuggestion } from '@/app/actions';
-import type { SuggestPsychologicalPriceOutput } from '@/ai/flows/suggest-pricing';
 
 const PLATFORM_FEES: { [key: string]: number } = {
   shopee: 7.5,
@@ -86,7 +82,6 @@ type FormValues = z.infer<typeof formSchema>;
 export default function PriceCalculator() {
   const { toast } = useToast();
   const [result, setResult] = useState<{ calculatedPrice: number } | null>(null);
-  const [aiSuggestion, setAiSuggestion] = useState<SuggestPsychologicalPriceOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<FormValues>({
@@ -105,7 +100,6 @@ export default function PriceCalculator() {
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
     setResult(null);
-    setAiSuggestion(null);
 
     const { cost, profitMargin, shippingCost, platform, customFee } = values;
     const platformFee =
@@ -124,21 +118,10 @@ export default function PriceCalculator() {
     const price =
       (cost * (1 + profitMargin / 100) + shippingCost) / (1 - platformFee / 100);
 
+    // Simulate a short delay for better user experience
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     setResult({ calculatedPrice: price });
-
-    const aiResponse = await getPsychologicalPriceSuggestion(price);
-
-    if ('error' in aiResponse) {
-      toast({
-        variant: 'destructive',
-        title: 'AI Suggestion Error',
-        description: aiResponse.error,
-      });
-      setAiSuggestion(null);
-    } else {
-      setAiSuggestion(aiResponse);
-    }
-
     setIsLoading(false);
   }
 
@@ -277,32 +260,6 @@ export default function PriceCalculator() {
                   )
                 )}
               </div>
-
-              {(isLoading || aiSuggestion) && <Separator className="my-8" />}
-
-              {isLoading && !aiSuggestion ? (
-                 <div className="text-center">
-                    <Skeleton className="h-8 w-48 mx-auto" />
-                    <Skeleton className="h-6 w-full mt-4" />
-                    <Skeleton className="h-6 w-3/4 mt-2 mx-auto" />
-                 </div>
-              ) : (
-                aiSuggestion && (
-                  <div className="text-center">
-                    <h3 className="text-xl font-headline flex items-center justify-center gap-2">
-                      <Sparkles className="h-6 w-6 text-accent" />
-                      AI-Powered Pricing Suggestion
-                    </h3>
-                    <p className="text-muted-foreground mt-2 mb-4 max-w-2xl mx-auto">{aiSuggestion.reasoning}</p>
-                    <div className="inline-block p-4 border-2 border-dashed border-accent rounded-lg">
-                      <p className="text-sm font-medium text-muted-foreground">Suggested Price:</p>
-                      <p className="text-4xl font-bold text-accent tracking-tight">
-                        {aiSuggestion.suggestedPrice.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                )
-              )}
           </CardContent>
         </Card>
       )}
