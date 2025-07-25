@@ -173,13 +173,26 @@ export default function PriceCalculator() {
   
   const saveToHistory = (resultToSave: CalculationResult) => {
     try {
-        const currentHistoryString = localStorage.getItem('calculationHistory');
-        const currentHistory = currentHistoryString ? JSON.parse(currentHistoryString) : [];
-        const newEntry = { ...resultToSave, date: new Date().toISOString() };
-        const updatedHistory = [newEntry, ...currentHistory].slice(0, 50); // Limit history to 50 entries
-        localStorage.setItem('calculationHistory', JSON.stringify(updatedHistory));
+      const historyKey = 'calculationHistory';
+      const historyDataString = localStorage.getItem(historyKey);
+      const today = new Date().toISOString();
+      const newEntry = { ...resultToSave, date: today };
+
+      if (historyDataString) {
+        const historyData = JSON.parse(historyDataString);
+        historyData.entries.unshift(newEntry);
+        historyData.entries = historyData.entries.slice(0, 50); // Limit entries
+        localStorage.setItem(historyKey, JSON.stringify(historyData));
+      } else {
+        // First time saving
+        const newHistoryData = {
+          firstDate: today,
+          entries: [newEntry]
+        };
+        localStorage.setItem(historyKey, JSON.stringify(newHistoryData));
+      }
     } catch (error) {
-        console.error("Failed to save to localStorage", error);
+      console.error("Failed to save to localStorage", error);
     }
   };
 

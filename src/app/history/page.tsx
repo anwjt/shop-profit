@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { History, ArrowLeft, Trash2, Info } from 'lucide-react';
+import { History, ArrowLeft, Trash2, Info, Timer } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { CalculationResult } from '@/components/price-calculator';
@@ -26,18 +27,41 @@ type HistoryItem = CalculationResult & {
     date: string;
 };
 
+type HistoryData = {
+    firstDate: string;
+    entries: HistoryItem[];
+}
+
 const formatPrice = (price: number) => {
     return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
   useEffect(() => {
+    const historyKey = 'calculationHistory';
     try {
-      const savedHistory = localStorage.getItem('calculationHistory');
+      const savedHistory = localStorage.getItem(historyKey);
       if (savedHistory) {
-        setHistory(JSON.parse(savedHistory));
+        const data: HistoryData = JSON.parse(savedHistory);
+        const firstDate = new Date(data.firstDate);
+        const expiryDate = new Date(firstDate.getTime());
+        expiryDate.setDate(firstDate.getDate() + 30);
+        
+        const now = new Date();
+
+        if (now > expiryDate) {
+          localStorage.removeItem(historyKey);
+          setHistory([]);
+          setDaysRemaining(null);
+        } else {
+          setHistory(data.entries);
+          const diffTime = expiryDate.getTime() - now.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          setDaysRemaining(diffDays);
+        }
       }
     } catch (error) {
       console.error("Failed to parse history from localStorage", error);
@@ -49,6 +73,7 @@ export default function HistoryPage() {
     try {
       localStorage.removeItem('calculationHistory');
       setHistory([]);
+      setDaysRemaining(null);
     } catch (error) {
       console.error("Failed to clear history from localStorage", error);
     }
@@ -79,6 +104,15 @@ export default function HistoryPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {daysRemaining !== null && (
+              <Alert variant="default" className="bg-yellow-100/50 border-yellow-300">
+                  <Timer className="h-4 w-4 text-yellow-800" />
+                  <AlertTitle className="text-yellow-800">ข้อมูลจะถูกล้างอัตโนมัติ</AlertTitle>
+                  <AlertDescription className="text-yellow-700">
+                    ประวัติการคำนวณจะถูกล้างในอีกประมาณ {daysRemaining} วัน เพื่อเพิ่มพื้นที่จัดเก็บข้อมูล
+                  </AlertDescription>
+              </Alert>
+            )}
             {history.length > 0 ? (
                 <>
                     <div className="overflow-x-auto">
