@@ -114,7 +114,7 @@ export default function PriceCalculator() {
       cost: undefined,
       category: '',
       otherCosts: [],
-      profitMargin: 0,
+      profitMargin: undefined,
       discount: undefined,
       affiliateCommission: undefined,
     },
@@ -158,50 +158,14 @@ export default function PriceCalculator() {
     const totalOtherCosts = otherCosts.reduce((sum, current) => sum + (current.value || 0), 0);
     const totalCost = cost + totalOtherCosts;
     const profitAmount = (cost * profitMargin) / 100;
-    
-    // Revised Formula for accuracy:
-    // Let SP = Selling Price
-    // Let D = Discount
-    // Let C = Total Cost (Cost + Other Costs)
-    // Let P = Desired Profit Amount
-    // Let Aff = Affiliate Commission %
-    // Let PF = Platform Fee % (Commission % + Order Fee %)
-    // Profit = (SP - D) - C - (SP-D)*PF - SP*Aff
-    // We want to find SP such that Profit = P
-    // P = SP - D - C - SP*PF + D*PF - SP*Aff
-    // P + D + C - D*PF = SP - SP*PF - SP*Aff
-    // P + D + C - D*PF = SP * (1 - PF - Aff)
-    // SP = (P + D + C - D*PF) / (1 - PF - Aff)
-    // This is mathematically incorrect.
-
-    // Let's re-derive.
-    // Revenue = SP - D
-    // Expenses = C + (SP - D) * PF + SP * Aff
-    // Profit = Revenue - Expenses
-    // P = (SP - D) - (C + (SP - D) * PF + SP * Aff)
-    // P = SP - D - C - (SP-D)*PF - SP*Aff
-    // P + D + C - D*PF = SP - SP*PF - SP*Aff
-    // P + D + C - D*PF = SP * (1 - PF - Aff)
-    // SP = (P + C + D - D*PF) / (1 - PF - Aff)
-    // Wait, the affiliate is on the total price, not discounted.
-
-    // Let's try again.
-    // Final Price Customer Pays = SP - D
-    // Platform takes fee on (SP - D) -> (SP - D) * PF
-    // Affiliate takes fee on SP -> SP * Aff
-    // Your Gross Revenue = SP - D
-    // Your Net Profit (P) = Gross Revenue - Total Cost - Platform Fee - Affiliate Fee
-    // P = (SP - D) - C - ((SP-D) * PF) - (SP * Aff)
-    // P = SP - D - C - SP*PF + D*PF - SP*Aff
-    // P + D + C - D*PF = SP - SP*PF - SP*Aff
-    // P + D + C - D*PF = SP * (1 - PF - Aff)
-    // SP = (P + C + D - (D * PF)) / (1 - PF - Aff) -> This seems correct.
 
     const platformFeeRate = (commissionPercent / 100) + (orderFeePercent / 100);
     const affiliateRate = affiliateCommission / 100;
+    
+    const totalFeeRate = platformFeeRate + affiliateRate;
 
     const numerator = totalCost + profitAmount + discount - (discount * platformFeeRate);
-    const denominator = 1 - platformFeeRate - affiliateRate;
+    const denominator = 1 - totalFeeRate;
 
     let sellingPrice = 0;
     if (denominator > 0) {
@@ -324,7 +288,7 @@ export default function PriceCalculator() {
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                         <FormControl>
-                          <Input type="number" placeholder="100" className="pl-8" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                          <Input type="number" placeholder="100" className="pl-8" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -340,7 +304,7 @@ export default function PriceCalculator() {
                       <div className="relative">
                         <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <FormControl>
-                          <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                          <Input type="number" placeholder="0" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -371,7 +335,7 @@ export default function PriceCalculator() {
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                                 <FormControl>
-                                  <Input type="number" placeholder="0" className="pl-8 w-32" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                                  <Input type="number" placeholder="0" className="pl-8 w-32" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                                 </FormControl>
                               </div>
                               <FormMessage />
@@ -402,7 +366,7 @@ export default function PriceCalculator() {
                         <div className="relative">
                           <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <FormControl>
-                            <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                            <Input type="number" placeholder="0" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                           </FormControl>
                         </div>
                         <FormDescription>
@@ -421,7 +385,7 @@ export default function PriceCalculator() {
                         <div className="relative">
                           <Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <FormControl>
-                            <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                            <Input type="number" placeholder="0" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                           </FormControl>
                         </div>
                         <FormDescription>
@@ -514,5 +478,7 @@ export default function PriceCalculator() {
       )}
     </div>
   );
+
+    
 
     
