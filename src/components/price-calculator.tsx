@@ -109,7 +109,7 @@ export default function PriceCalculator() {
       cost: undefined,
       category: '',
       otherCosts: [],
-      profitMargin: undefined,
+      profitMargin: 0,
       discount: undefined,
       affiliateCommission: undefined,
     },
@@ -341,7 +341,7 @@ export default function PriceCalculator() {
                       type="button"
                       variant="outline"
                       className="w-full"
-                      onClick={() => append({ name: '', value: 0 })}
+                      onClick={() => append({ name: '', value: undefined })}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       เพิ่มรายการค่าใช้จ่าย
