@@ -1,11 +1,12 @@
 'use server';
 
-import { firestore } from '@/lib/firebase-admin';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
 
 export async function saveApiKey(uid: string, apiKey: string) {
   try {
-    const userDocRef = firestore.collection('users').doc(uid);
-    await userDocRef.set({ apiKey }, { merge: true });
+    const userDocRef = doc(firestore, 'users', uid);
+    await setDoc(userDocRef, { apiKey }, { merge: true });
     return { success: true };
   } catch (error) {
     console.error('Error saving API key:', error);
@@ -15,10 +16,10 @@ export async function saveApiKey(uid: string, apiKey: string) {
 
 export async function getApiKey(uid: string): Promise<string | null> {
   try {
-    const userDocRef = firestore.collection('users').doc(uid);
-    const doc = await userDocRef.get();
-    if (doc.exists) {
-      return doc.data()?.apiKey || null;
+    const userDocRef = doc(firestore, 'users', uid);
+    const docSnap = await getDoc(userDocRef);
+    if (docSnap.exists()) {
+      return docSnap.data()?.apiKey || null;
     }
     return null;
   } catch (error) {
