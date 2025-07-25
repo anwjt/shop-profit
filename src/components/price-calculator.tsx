@@ -23,7 +23,14 @@ import {
   Lightbulb,
   FileText,
   Tag,
+  KeyRound,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
+import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+
+import { auth } from '@/lib/firebase';
+import { saveApiKey, getApiKey } from '@/app/actions';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -63,6 +70,9 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { suggestPrice, SuggestPriceOutput } from '@/ai/flows/suggest-price-flow';
 
 
@@ -87,10 +97,9 @@ const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: numb
   },
 };
 
-// Additional fees for Shopee payment methods (incl. VAT)
 const SHOPEE_EXTRA_FEES = {
-  creditCard: 0.06 * 1.07, // 6% (max rate) + 7% VAT
-  spayLater: 0.06 * 1.07, // 6% (max rate) + 7% VAT
+  creditCard: 0.06 * 1.07,
+  spayLater: 0.06 * 1.07,
 };
 
 const formSchema = z.object({
@@ -114,6 +123,11 @@ const suggestionFormSchema = z.object({
 });
 type SuggestionFormValues = z.infer<typeof suggestionFormSchema>;
 
+const apiKeyFormSchema = z.object({
+  apiKey: z.string().min(10, 'API Key ไม่ถูกต้อง'),
+});
+type ApiKeyFormValues = z.infer<typeof apiKeyFormSchema>;
+
 type CalculationResult = {
   sellingPrice: number;
   platformFeeAmount: number;
@@ -134,7 +148,6 @@ type CalculationResult = {
   totalCost: number;
 };
 
-
 export default function PriceCalculator() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -143,30 +156,54 @@ export default function PriceCalculator() {
   const [categories, setCategories] = useState<string[]>([]);
   const [isSuggestDialogOpen, setIsSuggestDialogOpen] = useState(false);
   
+  const [user, setUser] = useState<User | null>(null);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setIsAuthLoading(true);
+      if (currentUser) {
+        setUser(currentUser);
+        const key = await getApiKey(currentUser.uid);
+        if (key) {
+          setHasApiKey(true);
+        } else {
+          setHasApiKey(false);
+          setIsApiDialogOpen(true);
+        }
+      } else {
+        setUser(null);
+        setHasApiKey(false);
+      }
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      platform: '',
-      cost: undefined,
-      category: '',
-      otherCosts: [],
-      profitMargin: undefined,
-      discount: undefined,
+      platform: '', cost: undefined, category: '',
+      otherCosts: [], profitMargin: undefined, discount: undefined,
       affiliateCommission: undefined,
     },
   });
 
   const suggestionForm = useForm<SuggestionFormValues>({
     resolver: zodResolver(suggestionFormSchema),
-    defaultValues: {
-      productName: '',
-      productDescription: '',
-    },
+    defaultValues: { productName: '', productDescription: '' },
+  });
+
+  const apiKeyForm = useForm<ApiKeyFormValues>({
+    resolver: zodResolver(apiKeyFormSchema),
+    defaultValues: { apiKey: '' },
   });
 
   const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "otherCosts",
+    control: form.control, name: "otherCosts",
   });
 
   const selectedPlatform = form.watch('platform');
@@ -181,14 +218,51 @@ export default function PriceCalculator() {
     }
   }, [selectedPlatform, form]);
 
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
+      toast({
+        variant: 'destructive',
+        title: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
+        description: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง',
+      });
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
+  const handleSaveApiKey = async (values: ApiKeyFormValues) => {
+    if (!user) return;
+    const result = await saveApiKey(user.uid, values.apiKey);
+    if (result.success) {
+      setHasApiKey(true);
+      setIsApiDialogOpen(false);
+      toast({
+        title: 'บันทึกสำเร็จ',
+        description: 'API Key ของคุณถูกบันทึกเรียบร้อยแล้ว',
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'เกิดข้อผิดพลาด',
+        description: result.error,
+      });
+    }
+  };
+
   const calculateSellingPrice = (baseCost: number, profitAmount: number, discount: number, feeRate: number): number => {
     const numerator = baseCost + profitAmount - (discount * feeRate) + discount;
     const denominator = 1 - feeRate;
-
-    if (denominator <= 0) {
-      console.error("Total fee percentage is 100% or more.");
-      return 0; // Or handle as an error
-    }
+    if (denominator <= 0) return 0;
     return numerator / denominator;
   }
 
@@ -196,102 +270,66 @@ export default function PriceCalculator() {
     setIsLoading(true);
     setResult(null);
     setSuggestion(null);
-
     await new Promise((resolve) => setTimeout(resolve, 300));
-
     const { cost, profitMargin = 0, otherCosts = [], platform, category, discount = 0, affiliateCommission = 0 } = values;
-    
     if (!platform || !category || !PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
-        console.error("Invalid platform or category selected");
-        setIsLoading(false);
-        return;
+        setIsLoading(false); return;
     }
-
     const platformCategoryData = PLATFORM_FEES[platform][category];
     const commissionPercent = platformCategoryData.fee;
     const orderFeePercent = platformCategoryData.orderFee || 0;
     const paymentFeePercent = platformCategoryData.paymentFee || 0;
-
-
     const totalOtherCosts = otherCosts.reduce((sum, current) => sum + (current.value || 0), 0);
     const totalCost = cost + totalOtherCosts;
     const profitAmount = (cost * profitMargin) / 100;
-
-    let platformFeeRate = 0;
-    if (platform === 'lazada') {
-        platformFeeRate = (commissionPercent / 100) + (paymentFeePercent / 100);
-    } else {
-        platformFeeRate = (commissionPercent / 100) + (orderFeePercent / 100);
-    }
+    let platformFeeRate = (platform === 'lazada')
+        ? (commissionPercent / 100) + (paymentFeePercent / 100)
+        : (commissionPercent / 100) + (orderFeePercent / 100);
     const affiliateRate = affiliateCommission / 100;
-    
     const totalFeeRate = platformFeeRate + affiliateRate;
-    
     const sellingPrice = calculateSellingPrice(totalCost, profitAmount, discount, totalFeeRate);
-    if (sellingPrice === 0) {
-      setIsLoading(false);
-      return;
-    }
-
+    if (sellingPrice === 0) { setIsLoading(false); return; }
     const priceForFeeCalculation = sellingPrice - discount;
     const commissionAmount = priceForFeeCalculation * (commissionPercent / 100);
     const orderFeeAmount = platform === 'tiktok' ? priceForFeeCalculation * (orderFeePercent / 100) : 0;
     const paymentFeeAmount = platform === 'lazada' ? priceForFeeCalculation * (paymentFeePercent / 100) : 0;
-    
-    let totalPlatformFee = 0;
-     if (platform === 'lazada') {
-        totalPlatformFee = commissionAmount + paymentFeeAmount;
-    } else {
-         totalPlatformFee = commissionAmount + orderFeeAmount;
-    }
-
+    let totalPlatformFee = (platform === 'lazada') ? commissionAmount + paymentFeeAmount : commissionAmount + orderFeeAmount;
     const affiliateCommissionAmount = sellingPrice * affiliateRate;
-    
     const finalProfit = (sellingPrice - discount) - totalCost - totalPlatformFee - affiliateCommissionAmount;
-
     let shopeePrices: { shopeeCreditCardPrice?: number, shopeeSPayLaterPrice?: number } = {};
     if (platform === 'shopee') {
       const baseCommission = PLATFORM_FEES[platform][category].fee - (3*1.07);
       const baseFeeRate = (baseCommission / 100) + affiliateRate;
-      
       const creditCardFeeRate = baseFeeRate + SHOPEE_EXTRA_FEES.creditCard;
       const spayLaterFeeRate = baseFeeRate + SHOPEE_EXTRA_FEES.spayLater;
-
       shopeePrices.shopeeCreditCardPrice = calculateSellingPrice(totalCost, profitAmount, discount, creditCardFeeRate);
       shopeePrices.shopeeSPayLaterPrice = calculateSellingPrice(totalCost, profitAmount, discount, spayLaterFeeRate);
     }
-
     const newResult: CalculationResult = {
-      sellingPrice: sellingPrice,
-      platformFeeAmount: totalPlatformFee,
-      profit: finalProfit,
-      commissionAmount: commissionAmount,
-      orderFeeAmount: orderFeeAmount,
-      paymentFeeAmount: paymentFeeAmount,
-      affiliateCommissionAmount,
-      otherCosts: totalOtherCosts,
-      platform: platform,
-      commissionPercent,
-      orderFeePercent,
-      paymentFeePercent,
-      priceForFeeCalculation,
-      discount,
-      totalCost,
-      ...shopeePrices,
+      sellingPrice, platformFeeAmount: totalPlatformFee, profit: finalProfit, commissionAmount,
+      orderFeeAmount, paymentFeeAmount, affiliateCommissionAmount, otherCosts: totalOtherCosts,
+      platform, commissionPercent, orderFeePercent, paymentFeePercent, priceForFeeCalculation,
+      discount, totalCost, ...shopeePrices,
     };
     setResult(newResult);
     setIsLoading(false);
   }
 
   const handleSuggestPrice = async (suggestionValues: SuggestionFormValues) => {
-    if (!result) return;
-    
+    if (!result || !user) return;
     setIsSuggesting(true);
     setSuggestion(null);
     setIsSuggestDialogOpen(false);
-
     try {
+      const apiKey = await getApiKey(user.uid);
+      if (!apiKey) {
+        toast({ variant: 'destructive', title: 'ไม่พบ API Key', description: 'กรุณาเพิ่ม API Key ก่อนใช้งาน' });
+        setIsApiDialogOpen(true);
+        setIsSuggesting(false);
+        return;
+      }
       const suggestionResult = await suggestPrice({
+        apiKey,
         productName: suggestionValues.productName,
         productDescription: suggestionValues.productDescription,
         platform: result.platform,
@@ -302,18 +340,54 @@ export default function PriceCalculator() {
       setSuggestion(suggestionResult);
     } catch (error) {
       console.error("Error suggesting price:", error);
-      // You can add a toast notification here to inform the user about the error.
+      toast({ variant: 'destructive', title: 'AI Error', description: 'เกิดข้อผิดพลาดขณะเรียกใช้ AI' });
     } finally {
       setIsSuggesting(false);
     }
   };
-
-  const getCategoryLabel = (platform: string, categoryKey: string) => {
-    return PLATFORM_FEES[platform]?.[categoryKey]?.name || categoryKey;
+  
+  const AuthSection = () => {
+    if (isAuthLoading) {
+      return <Skeleton className="h-10 w-40" />;
+    }
+    if (user) {
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'}/>
+                <AvatarFallback><UserIcon /></AvatarFallback>
+              </Avatar>
+              <span className="hidden sm:inline">{user.displayName}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-2">
+            <Button variant="ghost" className="w-full justify-start" onClick={() => setIsApiDialogOpen(true)}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              จัดการ API Key
+            </Button>
+            <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              ออกจากระบบ
+            </Button>
+          </PopoverContent>
+        </Popover>
+      );
+    }
+    return (
+      <Button onClick={handleGoogleSignIn}>
+        <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-76.4 76.4A119.4 119.4 0 0 0 248 152c-66.6 0-120.9 54.4-120.9 120.9s54.3 120.9 120.9 120.9c47.7 0 88.1-27.1 108.3-65.7H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path></svg>
+        เข้าสู่ระบบด้วย Google
+      </Button>
+    )
   }
 
   return (
-    <div className="w-full max-w-4xl">
+    <div className="w-full max-w-4xl space-y-4">
+      <div className="flex justify-end p-2">
+        <AuthSection />
+      </div>
       <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
@@ -328,6 +402,7 @@ export default function PriceCalculator() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {/* Form Fields... */}
                 <FormField
                   control={form.control}
                   name="platform"
@@ -370,19 +445,10 @@ export default function PriceCalculator() {
                             const platformCategory = PLATFORM_FEES[selectedPlatform]?.[cat];
                             if (!platformCategory) return null;
                             let feeLabel = `~${platformCategory.fee.toFixed(2)}%`;
-                            if (selectedPlatform === 'shopee') {
-                                feeLabel = `${feeLabel} (รวม VAT และค่าธุรกรรม)`;
-                            } else if (selectedPlatform === 'lazada') {
-                                feeLabel = `~${platformCategory.fee.toFixed(2)}% + 3.21% (รวม VAT)`;
-                            } else if (platformCategory.orderFee) {
-                                feeLabel = `~${platformCategory.fee.toFixed(2)}% + ${platformCategory.orderFee.toFixed(2)}%`
-                            }
-
-                            return (
-                              <SelectItem key={cat} value={cat}>
-                                {platformCategory.name} (ค่าธรรมเนียม {feeLabel})
-                              </SelectItem>
-                            )
+                            if (selectedPlatform === 'shopee') feeLabel = `${feeLabel} (รวม VAT และค่าธุรกรรม)`;
+                            else if (selectedPlatform === 'lazada') feeLabel = `~${platformCategory.fee.toFixed(2)}% + 3.21% (รวม VAT)`;
+                            else if (platformCategory.orderFee) feeLabel = `~${platformCategory.fee.toFixed(2)}% + ${platformCategory.orderFee.toFixed(2)}%`
+                            return (<SelectItem key={cat} value={cat}>{platformCategory.name} (ค่าธรรมเนียม {feeLabel})</SelectItem>)
                           })}
                         </SelectContent>
                       </Select>
@@ -426,90 +492,17 @@ export default function PriceCalculator() {
                     <FormLabel>5. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
                     {fields.map((field, index) => (
                       <div key={field.id} className="flex items-center gap-2">
-                        <FormField
-                            control={form.control}
-                            name={`otherCosts.${index}.name`}
-                            render={({ field }) => (
-                              <FormItem className="flex-grow">
-                                <FormControl>
-                                    <Input type="text" placeholder="เช่น ค่าแพ็คของ" {...field} value={field.value ?? ''} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        <FormField
-                          control={form.control}
-                          name={`otherCosts.${index}.value`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
-                                <FormControl>
-                                  <Input type="number" placeholder="0" className="pl-8 w-32" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
-                                </FormControl>
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                          <XCircle className="h-5 w-5 text-destructive" />
-                        </Button>
+                        <FormField control={form.control} name={`otherCosts.${index}.name`} render={({ field }) => (<FormItem className="flex-grow"><FormControl><Input type="text" placeholder="เช่น ค่าแพ็คของ" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name={`otherCosts.${index}.value`} render={({ field }) => (<FormItem><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span><FormControl><Input type="number" placeholder="0" className="pl-8 w-32" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormMessage /></FormItem>)} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><XCircle className="h-5 w-5 text-destructive" /></Button>
                       </div>
                     ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => append({ name: '', value: undefined })}
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      เพิ่มรายการค่าใช้จ่าย
-                    </Button>
+                    <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', value: undefined })}><PlusCircle className="mr-2 h-4 w-4" />เพิ่มรายการค่าใช้จ่าย</Button>
                   </div>
-                   <FormField
-                    control={form.control}
-                    name="discount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>6. ส่วนลดร้านค้า (บาท)</FormLabel>
-                        <div className="relative">
-                          <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                          <FormControl>
-                            <Input type="number" placeholder="กรอกส่วนลด" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
-                          </FormControl>
-                        </div>
-                        <FormDescription>
-                          ส่วนลดที่ร้านค้าเป็นผู้รับผิดชอบทั้งหมด (เช่น คูปองส่วนลดที่ร้านสร้างเอง)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="affiliateCommission"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>7. ค่าคอม Affiliate (%)</FormLabel>
-                        <div className="relative">
-                          <Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                          <FormControl>
-                            <Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
-                          </FormControl>
-                        </div>
-                        <FormDescription>
-                          ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                   <FormField control={form.control} name="discount" render={({ field }) => (<FormItem><FormLabel>6. ส่วนลดร้านค้า (บาท)</FormLabel><div className="relative"><BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกส่วนลด" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ส่วนลดที่ร้านค้าเป็นผู้รับผิดชอบทั้งหมด (เช่น คูปองส่วนลดที่ร้านสร้างเอง)</FormDescription><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="affiliateCommission" render={({ field }) => (<FormItem><FormLabel>7. ค่าคอม Affiliate (%)</FormLabel><div className="relative"><Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย</FormDescription><FormMessage /></FormItem>)} />
               </div>
-              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>
-                {isLoading ? 'กำลังคำนวณ...' : 'คำนวณราคา'}
-              </Button>
+              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>{isLoading ? 'กำลังคำนวณ...' : 'คำนวณราคา'}</Button>
             </form>
           </Form>
         </CardContent>
@@ -517,140 +510,21 @@ export default function PriceCalculator() {
 
       {(isLoading || result) && (
         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {isLoading && !result ? (
-              <div className="space-y-4">
-                 <Skeleton className="h-24 w-full" />
-                 <Skeleton className="h-8 w-3/4 mx-auto" />
-                 <Skeleton className="h-8 w-3/4 mx-auto" />
-                 <Skeleton className="h-8 w-3/4 mx-auto" />
-              </div>
+              <div className="space-y-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-8 w-3/4 mx-auto" /><Skeleton className="h-8 w-3/4 mx-auto" /><Skeleton className="h-8 w-3/4 mx-auto" /></div>
             ) : (
               result && (
                 <>
-                  <div className="text-center p-6 bg-muted/50 rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)</p>
-                    <p className="text-5xl font-bold text-primary tracking-tight mt-2">
-                      {result.sellingPrice.toFixed(2)}
-                    </p>
-                  </div>
+                  <div className="text-center p-6 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)</p><p className="text-5xl font-bold text-primary tracking-tight mt-2">{result.sellingPrice.toFixed(2)}</p></div>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม</p>
-                        <p className="text-2xl font-semibold text-foreground text-center">{result.platformFeeAmount.toFixed(2)}</p>
-                        <div className="text-xs text-muted-foreground mt-2 space-y-1 text-center">
-                          <p>
-                            ค่าคอมมิชชั่น: {result.commissionPercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.commissionAmount.toFixed(2)}
-                          </p>
-                          {result.orderFeeAmount > 0 && (
-                            <p>
-                              ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}
-                            </p>
-                          )}
-                          {result.paymentFeeAmount > 0 && (
-                             <p>
-                              ค่าธรรมเนียมการชำระเงิน: {result.paymentFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.paymentFeeAmount.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                    </div>
-                     <div className="p-4 bg-muted/50 rounded-lg">
-                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Wallet />กำไรที่จะได้รับ (โดยประมาณ)</p>
-                       <p className="text-2xl font-semibold text-green-600 mt-1 text-center">{result.profit.toFixed(2)}</p>
-                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม</p><p className="text-2xl font-semibold text-foreground text-center">{result.platformFeeAmount.toFixed(2)}</p><div className="text-xs text-muted-foreground mt-2 space-y-1 text-center"><p>ค่าคอมมิชชั่น: {result.commissionPercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.commissionAmount.toFixed(2)}</p>{result.orderFeeAmount > 0 && (<p>ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}</p>)}{result.paymentFeeAmount > 0 && (<p>ค่าธรรมเนียมการชำระเงิน: {result.paymentFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.paymentFeeAmount.toFixed(2)}</p>)}</div></div>
+                     <div className="p-4 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Wallet />กำไรที่จะได้รับ (โดยประมาณ)</p><p className="text-2xl font-semibold text-green-600 mt-1 text-center">{result.profit.toFixed(2)}</p></div>
                   </div>
-                  {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {result.otherCosts > 0 && (
-                         <div className="p-4 bg-muted/50 rounded-lg">
-                           <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p>
-                           <p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p>
-                        </div>
-                      )}
-                      {result.affiliateCommissionAmount > 0 && (
-                         <div className={`p-4 bg-muted/50 rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}>
-                           <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p>
-                           <p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.affiliateCommissionAmount.toFixed(2)}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <Alert variant="default" className="mt-4 bg-muted/50 border-transparent">
-                      <Info className="h-4 w-4" />
-                      <AlertTitle>ข้อควรทราบ</AlertTitle>
-                      <AlertDescription>
-                          ราคานี้เป็นการคำนวณเบื้องต้น อาจมีการเปลี่ยนแปลงจากค่าธรรมเนียมส่งเสริมการขาย, ค่าขนส่ง, หรือส่วนลดอื่นๆ ของแพลตฟอร์ม
-                      </AlertDescription>
-                  </Alert>
-                  
-                  {!suggestion && (
-                     <Dialog open={isSuggestDialogOpen} onOpenChange={setIsSuggestDialogOpen}>
-                        <DialogTrigger asChild>
-                           <Button 
-                              variant="outline" 
-                              className="w-full mt-4" 
-                              disabled={isSuggesting}
-                            >
-                              <Lightbulb className="mr-2 h-4 w-4" />
-                              รับข้อเสนอแนะราคาโปรโมชั่น
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <Form {...suggestionForm}>
-                            <form onSubmit={suggestionForm.handleSubmit(handleSuggestPrice)} className="space-y-4">
-                              <DialogHeader>
-                                <DialogTitle>ข้อมูลสินค้าสำหรับ AI</DialogTitle>
-                                <DialogDescription>
-                                  กรุณาให้ข้อมูลเกี่ยวกับสินค้าของคุณเพื่อให้ AI ช่วยแนะนำราคาโปรโมชั่นที่เหมาะสมที่สุด
-                                </DialogDescription>
-                              </DialogHeader>
-                              
-                               <FormField
-                                control={suggestionForm.control}
-                                name="productName"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>ชื่อสินค้า</FormLabel>
-                                    <div className="relative">
-                                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                      <FormControl>
-                                          <Input type="text" placeholder="เช่น เสื้อยืดลายแมว" className="pl-10" {...field} />
-                                      </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <FormField
-                                control={suggestionForm.control}
-                                name="productDescription"
-                                render={({ field }) => (
-                                  <FormItem>
-                                     <FormLabel>รายละเอียดสินค้า</FormLabel>
-                                     <div className="relative">
-                                      <FileText className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                                       <FormControl>
-                                          <Textarea placeholder="เช่น เสื้อยืดผ้าคอตตอน 100% ใส่สบาย ไม่ร้อน เหมาะกับอากาศเมืองไทย" className="pl-10" {...field} />
-                                      </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <DialogFooter>
-                                <Button type="submit" disabled={isSuggesting}>
-                                  {isSuggesting ? 'กำลังวิเคราะห์...' : 'รับข้อเสนอแนะ'}
-                                </Button>
-                              </DialogFooter>
-                            </form>
-                          </Form>
-                        </DialogContent>
-                      </Dialog>
-                  )}
+                  {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{result.otherCosts > 0 && (<div className="p-4 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p></div>)}{result.affiliateCommissionAmount > 0 && (<div className={`p-4 bg-muted/50 rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.affiliateCommissionAmount.toFixed(2)}</p></div>)}</div>)}
+                  <Alert variant="default" className="mt-4 bg-muted/50 border-transparent"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคานี้เป็นการคำนวณเบื้องต้น อาจมีการเปลี่ยนแปลงจากค่าธรรมเนียมส่งเสริมการขาย, ค่าขนส่ง, หรือส่วนลดอื่นๆ ของแพลตฟอร์ม</AlertDescription></Alert>
+                  {!suggestion && (<Dialog open={isSuggestDialogOpen} onOpenChange={setIsSuggestDialogOpen}><DialogTrigger asChild><Button variant="outline" className="w-full mt-4" disabled={isSuggesting || !user || !hasApiKey}><Lightbulb className="mr-2 h-4 w-4" />{!user ? 'กรุณาเข้าสู่ระบบก่อน' : !hasApiKey ? 'กรุณาเพิ่ม API Key' : 'รับข้อเสนอแนะราคาโปรโมชั่น'}</Button></DialogTrigger><DialogContent><Form {...suggestionForm}><form onSubmit={suggestionForm.handleSubmit(handleSuggestPrice)} className="space-y-4"><DialogHeader><DialogTitle>ข้อมูลสินค้าสำหรับ AI</DialogTitle><DialogDescription>กรุณาให้ข้อมูลเกี่ยวกับสินค้าของคุณเพื่อให้ AI ช่วยแนะนำราคาโปรโมชั่นที่เหมาะสมที่สุด</DialogDescription></DialogHeader><FormField control={suggestionForm.control} name="productName" render={({ field }) => (<FormItem><FormLabel>ชื่อสินค้า</FormLabel><div className="relative"><Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="text" placeholder="เช่น เสื้อยืดลายแมว" className="pl-10" {...field} /></FormControl></div><FormMessage /></FormItem>)} /><FormField control={suggestionForm.control} name="productDescription" render={({ field }) => (<FormItem><FormLabel>รายละเอียดสินค้า</FormLabel><div className="relative"><FileText className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" /><FormControl><Textarea placeholder="เช่น เสื้อยืดผ้าคอตตอน 100% ใส่สบาย ไม่ร้อน เหมาะกับอากาศเมืองไทย" className="pl-10" {...field} /></FormControl></div><FormMessage /></FormItem>)} /><DialogFooter><Button type="submit" disabled={isSuggesting}>{isSuggesting ? 'กำลังวิเคราะห์...' : 'รับข้อเสนอแนะ'}</Button></DialogFooter></form></Form></DialogContent></Dialog>)}
                 </>
               )
             )}
@@ -658,96 +532,44 @@ export default function PriceCalculator() {
         </Card>
       )}
 
-      {isSuggesting && (
-         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
-            <CardHeader>
-                <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
-                    <Lightbulb className="h-6 w-6 text-yellow-500" />
-                    กำลังวิเคราะห์ราคา...
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="flex justify-center items-center h-24">
-               <Skeleton className="h-8 w-3/4 mx-auto" />
-            </CardContent>
-        </Card>
-      )}
+      {isSuggesting && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Lightbulb className="h-6 w-6 text-yellow-500" />กำลังวิเคราะห์ราคา...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-24"><Skeleton className="h-8 w-3/4 mx-auto" /></CardContent></Card>)}
+      {suggestion && suggestion.shouldSuggest && suggestion.suggestedPrice && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Lightbulb className="h-6 w-6 text-yellow-500" />ราคาโปรโมชั่นที่แนะนำ</CardTitle></CardHeader><CardContent className="text-center"><p className="text-5xl font-bold text-primary tracking-tight">{suggestion.suggestedPrice.toFixed(2)}</p>{suggestion.reasoning && (<Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-sm"><Info className="h-4 w-4" /><AlertTitle>เหตุผล</AlertTitle><AlertDescription>{suggestion.reasoning}</AlertDescription></Alert>)}</CardContent></Card>)}
+      {suggestion && !suggestion.shouldSuggest && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardContent className="p-6 text-center"><p className="text-muted-foreground">AI วิเคราะห์แล้วพบว่าราคาปัจจุบันเหมาะสมดีแล้ว จึงไม่มีข้อเสนอแนะเพิ่มเติม</p></CardContent></Card>)}
+      {result && result.platform === 'shopee' && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Sparkles className="h-6 w-6 text-yellow-500" />ราคาแนะนำสำหรับช่องทางชำระเงินเพิ่มเติม (Shopee)</CardTitle><CardDescription className="text-center">ราคาโดยประมาณเมื่อลูกค้าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)</CardDescription></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="text-center p-6 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต (ผ่อนชำระ)</p><p className="text-4xl font-bold text-primary tracking-tight">{result.shopeeCreditCardPrice?.toFixed(2)}</p></div><div className="text-center p-6 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p><p className="text-4xl font-bold text-primary tracking-tight">{result.shopeeSPayLaterPrice?.toFixed(2)}</p></div><div className="md:col-span-2"><Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-xs"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคาที่แสดงเป็นเพียง **การประมาณการ** โดยใช้อัตราค่าธรรมเนียมสูงสุด และยัง **ไม่รวมค่าขนส่ง** หรือ **ส่วนลดที่ Shopee รับผิดชอบ** ซึ่งอาจส่งผลให้ราคาจริงมีการเปลี่ยนแปลงได้</AlertDescription></Alert></div></CardContent></Card>)}
 
-      {suggestion && suggestion.shouldSuggest && suggestion.suggestedPrice && (
-         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
-            <CardHeader>
-                <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
-                    <Lightbulb className="h-6 w-6 text-yellow-500" />
-                    ราคาโปรโมชั่นที่แนะนำ
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-                 <p className="text-5xl font-bold text-primary tracking-tight">
-                    {suggestion.suggestedPrice.toFixed(2)}
-                 </p>
-                 {suggestion.reasoning && (
-                    <Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-sm">
-                        <Info className="h-4 w-4" />
-                        <AlertTitle>เหตุผล</AlertTitle>
-                        <AlertDescription>
-                            {suggestion.reasoning}
-                        </AlertDescription>
-                    </Alert>
-                 )}
-            </CardContent>
-        </Card>
-      )}
-
-      {suggestion && !suggestion.shouldSuggest && (
-         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
-            <CardContent className="p-6 text-center">
-                 <p className="text-muted-foreground">AI วิเคราะห์แล้วพบว่าราคาปัจจุบันเหมาะสมดีแล้ว จึงไม่มีข้อเสนอแนะเพิ่มเติม</p>
-            </CardContent>
-        </Card>
-      )}
-
-
-      {result && result.platform === 'shopee' && (
-        <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
-            <CardHeader>
-                <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
-                    <Sparkles className="h-6 w-6 text-yellow-500" />
-                    ราคาแนะนำสำหรับช่องทางชำระเงินเพิ่มเติม (Shopee)
-                </CardTitle>
-                <CardDescription className="text-center">
-                    ราคาโดยประมาณเมื่อลูกค้าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="text-center p-6 bg-muted/50 rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
-                        <CreditCard /> บัตรเครดิต (ผ่อนชำระ)
-                    </p>
-                    <p className="text-4xl font-bold text-primary tracking-tight">
-                      {result.shopeeCreditCardPrice?.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="text-center p-6 bg-muted/50 rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
-                        <Sparkles className="h-4 w-4" /> SPayLater
-                    </p>
-                    <p className="text-4xl font-bold text-primary tracking-tight">
-                      {result.shopeeSPayLaterPrice?.toFixed(2)}
-                    </p>
-                  </div>
-                   <div className="md:col-span-2">
-                     <Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-xs">
-                      <Info className="h-4 w-4" />
-                      <AlertTitle>ข้อควรทราบ</AlertTitle>
-                      <AlertDescription>
-                          ราคาที่แสดงเป็นเพียง **การประมาณการ** โดยใช้อัตราค่าธรรมเนียมสูงสุด และยัง **ไม่รวมค่าขนส่ง** หรือ **ส่วนลดที่ Shopee รับผิดชอบ** ซึ่งอาจส่งผลให้ราคาจริงมีการเปลี่ยนแปลงได้
-                      </AlertDescription>
-                  </Alert>
-                  </div>
-            </CardContent>
-        </Card>
-      )}
+      <Dialog open={isApiDialogOpen} onOpenChange={setIsApiDialogOpen}>
+        <DialogContent>
+          <Form {...apiKeyForm}>
+            <form onSubmit={apiKeyForm.handleSubmit(handleSaveApiKey)} className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>กรุณาเพิ่ม Gemini API Key</DialogTitle>
+                <DialogDescription>
+                  เพื่อใช้งานฟีเจอร์แนะนำราคาโดย AI คุณจำเป็นต้องใช้ Gemini API Key ของคุณเอง คุณสามารถรับคีย์ได้จาก Google AI Studio
+                </DialogDescription>
+              </DialogHeader>
+              <FormField
+                control={apiKeyForm.control}
+                name="apiKey"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gemini API Key</FormLabel>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <FormControl>
+                        <Input type="password" placeholder="กรอก API Key ของคุณ" className="pl-10" {...field} />
+                      </FormControl>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit">บันทึก</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
-    
