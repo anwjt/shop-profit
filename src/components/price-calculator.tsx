@@ -35,6 +35,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   Form,
   FormControl,
   FormDescription,
@@ -85,8 +94,6 @@ const SHOPEE_EXTRA_FEES = {
 };
 
 const formSchema = z.object({
-  productName: z.string().optional(),
-  productDescription: z.string().optional(),
   platform: z.string({ required_error: 'กรุณาเลือกแพลตฟอร์ม' }).min(1, 'กรุณาเลือกแพลตฟอร์ม'),
   cost: z.coerce.number().min(0.01, 'ราคาต้นทุนต้องมากกว่า 0'),
   category: z.string({ required_error: 'กรุณาเลือกหมวดหมู่สินค้า' }).min(1, 'กรุณาเลือกหมวดหมู่สินค้า'),
@@ -100,6 +107,12 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const suggestionFormSchema = z.object({
+  productName: z.string().min(1, 'กรุณากรอกชื่อสินค้า'),
+  productDescription: z.string().min(1, 'กรุณากรอกรายละเอียดสินค้า'),
+});
+type SuggestionFormValues = z.infer<typeof suggestionFormSchema>;
 
 type CalculationResult = {
   sellingPrice: number;
@@ -128,12 +141,11 @@ export default function PriceCalculator() {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestion, setSuggestion] = useState<SuggestPriceOutput | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
+  const [isSuggestDialogOpen, setIsSuggestDialogOpen] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      productName: '',
-      productDescription: '',
       platform: '',
       cost: undefined,
       category: '',
@@ -141,6 +153,14 @@ export default function PriceCalculator() {
       profitMargin: undefined,
       discount: undefined,
       affiliateCommission: undefined,
+    },
+  });
+
+  const suggestionForm = useForm<SuggestionFormValues>({
+    resolver: zodResolver(suggestionFormSchema),
+    defaultValues: {
+      productName: '',
+      productDescription: '',
     },
   });
 
@@ -263,21 +283,17 @@ export default function PriceCalculator() {
     setIsLoading(false);
   }
 
-  const handleSuggestPrice = async () => {
+  const handleSuggestPrice = async (suggestionValues: SuggestionFormValues) => {
     if (!result) return;
-    const { productName, productDescription } = form.getValues();
-    if (!productName || !productDescription) {
-        // You can use a toast or an alert to notify the user.
-        alert("กรุณากรอกชื่อและรายละเอียดสินค้าก่อนรับข้อเสนอแนะ");
-        return;
-    }
-
+    
     setIsSuggesting(true);
     setSuggestion(null);
+    setIsSuggestDialogOpen(false);
+
     try {
       const suggestionResult = await suggestPrice({
-        productName,
-        productDescription,
+        productName: suggestionValues.productName,
+        productDescription: suggestionValues.productDescription,
         platform: result.platform,
         currentPrice: result.sellingPrice,
         cost: result.totalCost,
@@ -311,43 +327,6 @@ export default function PriceCalculator() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-               <div className="space-y-2">
-                 <FormLabel>ข้อมูลสินค้า (สำหรับ AI ช่วยแนะนำราคา)</FormLabel>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="productName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="relative">
-                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <FormControl>
-                                <Input type="text" placeholder="ชื่อสินค้า" className="pl-10" {...field} />
-                            </FormControl>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="productDescription"
-                      render={({ field }) => (
-                        <FormItem>
-                           <div className="relative">
-                            <FileText className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                             <FormControl>
-                                <Textarea placeholder="รายละเอียดสินค้า" className="pl-10" {...field} />
-                            </FormControl>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                </div>
-              </div>
-
-
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -607,17 +586,70 @@ export default function PriceCalculator() {
                           ราคานี้เป็นการคำนวณเบื้องต้น อาจมีการเปลี่ยนแปลงจากค่าธรรมเนียมส่งเสริมการขาย, ค่าขนส่ง, หรือส่วนลดอื่นๆ ของแพลตฟอร์ม
                       </AlertDescription>
                   </Alert>
-
+                  
                   {!suggestion && (
-                     <Button 
-                        variant="outline" 
-                        className="w-full mt-4" 
-                        onClick={handleSuggestPrice} 
-                        disabled={isSuggesting}
-                      >
-                        <Lightbulb className="mr-2 h-4 w-4" />
-                        {isSuggesting ? 'กำลังรับข้อเสนอแนะ...' : 'รับข้อเสนอแนะราคาโปรโมชั่น'}
-                      </Button>
+                     <Dialog open={isSuggestDialogOpen} onOpenChange={setIsSuggestDialogOpen}>
+                        <DialogTrigger asChild>
+                           <Button 
+                              variant="outline" 
+                              className="w-full mt-4" 
+                              disabled={isSuggesting}
+                            >
+                              <Lightbulb className="mr-2 h-4 w-4" />
+                              รับข้อเสนอแนะราคาโปรโมชั่น
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <Form {...suggestionForm}>
+                            <form onSubmit={suggestionForm.handleSubmit(handleSuggestPrice)} className="space-y-4">
+                              <DialogHeader>
+                                <DialogTitle>ข้อมูลสินค้าสำหรับ AI</DialogTitle>
+                                <DialogDescription>
+                                  กรุณาให้ข้อมูลเกี่ยวกับสินค้าของคุณเพื่อให้ AI ช่วยแนะนำราคาโปรโมชั่นที่เหมาะสมที่สุด
+                                </DialogDescription>
+                              </DialogHeader>
+                              
+                               <FormField
+                                control={suggestionForm.control}
+                                name="productName"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>ชื่อสินค้า</FormLabel>
+                                    <div className="relative">
+                                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                      <FormControl>
+                                          <Input type="text" placeholder="เช่น เสื้อยืดลายแมว" className="pl-10" {...field} />
+                                      </FormControl>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={suggestionForm.control}
+                                name="productDescription"
+                                render={({ field }) => (
+                                  <FormItem>
+                                     <FormLabel>รายละเอียดสินค้า</FormLabel>
+                                     <div className="relative">
+                                      <FileText className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                                       <FormControl>
+                                          <Textarea placeholder="เช่น เสื้อยืดผ้าคอตตอน 100% ใส่สบาย ไม่ร้อน เหมาะกับอากาศเมืองไทย" className="pl-10" {...field} />
+                                      </FormControl>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <DialogFooter>
+                                <Button type="submit" disabled={isSuggesting}>
+                                  {isSuggesting ? 'กำลังวิเคราะห์...' : 'รับข้อเสนอแนะ'}
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </Form>
+                        </DialogContent>
+                      </Dialog>
                   )}
                 </>
               )
@@ -717,3 +749,5 @@ export default function PriceCalculator() {
     </div>
   );
 }
+
+    
