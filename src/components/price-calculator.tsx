@@ -52,19 +52,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
-const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number } } } = {
+const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number, paymentFee?: number } } } = {
   shopee: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 8.56 + (3*1.07) }, // 8% + 3% + VAT
-    'fashion': { name: 'สินค้าแฟชั่น', fee: 9.63 + (3*1.07) }, // 9% + 3% + VAT
-    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 8.025 + (3*1.07) }, // 7.5% + 3% + VAT
-    'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 + (3*1.07) }, // 8% + 3% + VAT
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 8.56 + (3*1.07) },
+    'fashion': { name: 'สินค้าแฟชั่น', fee: 9.63 + (3*1.07) },
+    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 8.025 + (3*1.07) },
+    'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 + (3*1.07) },
   },
   lazada: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์ (สูงสุด)', fee: 8.0 * 1.07 }, // 8% + VAT
-    'general': { name: 'สินค้าทั่วไป (สูงสุด)', fee: 8.0 * 1.07 }, // 8% + VAT
-    'fashion': { name: 'สินค้าแฟชั่น (สูงสุด)', fee: 9.0 * 1.07 }, // 9% + VAT
-    'fmcg': { name: 'สินค้าอุปโภคบริโภค', fee: 8.0 * 1.07 }, // 8% + VAT
-    'digital': { name: 'บัตรกำนัลดิจิทัล', fee: 7.0 * 1.07 }, // 7% + VAT
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์ (สูงสุด)', fee: 8.0 * 1.07, paymentFee: 3.0 * 1.07 },
+    'general': { name: 'สินค้าทั่วไป (สูงสุด)', fee: 8.0 * 1.07, paymentFee: 3.0 * 1.07 },
+    'fashion': { name: 'สินค้าแฟชั่น (สูงสุด)', fee: 9.0 * 1.07, paymentFee: 3.0 * 1.07 },
+    'fmcg': { name: 'สินค้าอุปโภคบริโภค', fee: 8.0 * 1.07, paymentFee: 3.0 * 1.07 },
+    'digital': { name: 'บัตรกำนัลดิจิทัล', fee: 7.0 * 1.07, paymentFee: 3.0 * 1.07 },
   },
   tiktok: {
     'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42, orderFee: 3.21 },
@@ -100,11 +100,13 @@ type CalculationResult = {
   profit: number;
   commissionAmount: number;
   orderFeeAmount: number;
+  paymentFeeAmount: number;
   affiliateCommissionAmount: number;
   otherCosts: number;
   platform: string;
   commissionPercent: number;
   orderFeePercent: number;
+  paymentFeePercent: number;
   priceForFeeCalculation: number;
   discount: number;
   shopeeCreditCardPrice?: number;
@@ -148,7 +150,7 @@ export default function PriceCalculator() {
   }, [selectedPlatform, form]);
 
   const calculateSellingPrice = (baseCost: number, profitAmount: number, discount: number, feeRate: number): number => {
-    const numerator = baseCost + profitAmount + discount - (discount * feeRate);
+    const numerator = baseCost + profitAmount - (discount * feeRate) + discount;
     const denominator = 1 - feeRate;
 
     if (denominator <= 0) {
@@ -175,12 +177,19 @@ export default function PriceCalculator() {
     const platformCategoryData = PLATFORM_FEES[platform][category];
     const commissionPercent = platformCategoryData.fee;
     const orderFeePercent = platformCategoryData.orderFee || 0;
+    const paymentFeePercent = platformCategoryData.paymentFee || 0;
+
 
     const totalOtherCosts = otherCosts.reduce((sum, current) => sum + (current.value || 0), 0);
     const totalCost = cost + totalOtherCosts;
     const profitAmount = (cost * profitMargin) / 100;
 
-    const platformFeeRate = (commissionPercent / 100) + (orderFeePercent / 100);
+    let platformFeeRate = 0;
+    if (platform === 'lazada') {
+        platformFeeRate = (commissionPercent / 100) + (paymentFeePercent / 100);
+    } else {
+        platformFeeRate = (commissionPercent / 100) + (orderFeePercent / 100);
+    }
     const affiliateRate = affiliateCommission / 100;
     
     const totalFeeRate = platformFeeRate + affiliateRate;
@@ -193,11 +202,18 @@ export default function PriceCalculator() {
 
     const priceForFeeCalculation = sellingPrice - discount;
     const commissionAmount = priceForFeeCalculation * (commissionPercent / 100);
-    const orderFeeAmount = priceForFeeCalculation * (orderFeePercent / 100);
-    const totalPlatformFee = commissionAmount + orderFeeAmount;
+    const orderFeeAmount = platform === 'tiktok' ? priceForFeeCalculation * (orderFeePercent / 100) : 0;
+    const paymentFeeAmount = platform === 'lazada' ? priceForFeeCalculation * (paymentFeePercent / 100) : 0;
     
-    const affiliateCommissionAmount = sellingPrice * affiliateRate;
+    let totalPlatformFee = 0;
+     if (platform === 'lazada') {
+        totalPlatformFee = commissionAmount + paymentFeeAmount;
+    } else {
+         totalPlatformFee = commissionAmount + orderFeeAmount;
+    }
 
+    const affiliateCommissionAmount = sellingPrice * affiliateRate;
+    
     const finalProfit = (sellingPrice - discount) - totalCost - totalPlatformFee - affiliateCommissionAmount;
 
     let shopeePrices: { shopeeCreditCardPrice?: number, shopeeSPayLaterPrice?: number } = {};
@@ -218,11 +234,13 @@ export default function PriceCalculator() {
       profit: finalProfit,
       commissionAmount: commissionAmount,
       orderFeeAmount: orderFeeAmount,
+      paymentFeeAmount: paymentFeeAmount,
       affiliateCommissionAmount,
       otherCosts: totalOtherCosts,
       platform: platform,
       commissionPercent,
       orderFeePercent,
+      paymentFeePercent,
       priceForFeeCalculation,
       discount,
       ...shopeePrices,
@@ -295,6 +313,8 @@ export default function PriceCalculator() {
                             let feeLabel = `~${platformCategory.fee.toFixed(2)}%`;
                             if (selectedPlatform === 'shopee') {
                                 feeLabel = `${feeLabel} (รวม VAT และค่าธุรกรรม)`;
+                            } else if (selectedPlatform === 'lazada') {
+                                feeLabel = `~${platformCategory.fee.toFixed(2)}% + 3.21% (รวม VAT)`;
                             } else if (platformCategory.orderFee) {
                                 feeLabel = `~${platformCategory.fee.toFixed(2)}% + ${platformCategory.orderFee.toFixed(2)}%`
                             }
@@ -471,6 +491,11 @@ export default function PriceCalculator() {
                               ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}
                             </p>
                           )}
+                          {result.paymentFeeAmount > 0 && (
+                             <p>
+                              ค่าธรรมเนียมการชำระเงิน: {result.paymentFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.paymentFeeAmount.toFixed(2)}
+                            </p>
+                          )}
                         </div>
                     </div>
                      <div className="p-4 bg-muted/50 rounded-lg">
@@ -555,3 +580,6 @@ export default function PriceCalculator() {
     
 
 
+
+
+    
