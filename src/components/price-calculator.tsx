@@ -17,6 +17,7 @@ import {
   PlusCircle,
   XCircle,
   BadgePercent,
+  Handshake,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,7 @@ const formSchema = z.object({
   })).optional(),
   profitMargin: z.coerce.number().min(0, 'กำไรที่ต้องการต้องไม่ติดลบ'),
   discount: z.coerce.number().min(0, 'ส่วนลดต้องไม่ติดลบ').optional(),
+  affiliateCommission: z.coerce.number().min(0, 'ค่าคอมมิชชั่นต้องไม่ติดลบ').optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -90,6 +92,7 @@ type CalculationResult = {
   profit: number;
   commissionAmount: number;
   orderFeeAmount: number;
+  affiliateCommissionAmount: number;
   otherCosts: number;
   platform: string;
 };
@@ -108,6 +111,7 @@ export default function PriceCalculator() {
       otherCosts: [],
       profitMargin: 0,
       discount: 0,
+      affiliateCommission: 0,
     },
   });
 
@@ -134,7 +138,7 @@ export default function PriceCalculator() {
 
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const { cost, profitMargin, otherCosts = [], platform, category, discount = 0 } = values;
+    const { cost, profitMargin, otherCosts = [], platform, category, discount = 0, affiliateCommission = 0 } = values;
     
     if (!platform || !category || !PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
         console.error("Invalid platform or category selected");
@@ -150,8 +154,9 @@ export default function PriceCalculator() {
     const totalCost = cost + totalOtherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
-    // Formula: Selling Price = (Total Cost + Desired Profit + Discount) / (1 - Total Fee Percentage)
-    const sellingPrice = (totalCost + profitAmount + discount) / (1 - (commissionPercent / 100) - (orderFeePercent / 100));
+    // Formula: Selling Price = (Total Cost + Desired Profit + Discount) / (1 - Total Fee Percentage - Affiliate Commission %)
+    const totalFeePercentage = (commissionPercent / 100) + (orderFeePercent / 100) + (affiliateCommission / 100);
+    const sellingPrice = (totalCost + profitAmount + discount) / (1 - totalFeePercentage);
 
     // For calculation and display purposes, the "price" the fee is based on is the selling price minus the seller's discount
     const priceForFeeCalculation = sellingPrice - discount;
@@ -161,7 +166,9 @@ export default function PriceCalculator() {
     const orderFeeAmount = priceForFeeCalculation * (orderFeePercent / 100);
     const totalPlatformFee = commissionAmount + orderFeeAmount;
     
-    const finalProfit = sellingPrice - cost - totalOtherCosts - discount - totalPlatformFee;
+    const affiliateCommissionAmount = sellingPrice * (affiliateCommission / 100);
+
+    const finalProfit = sellingPrice - cost - totalOtherCosts - discount - totalPlatformFee - affiliateCommissionAmount;
 
     const newResult: CalculationResult = {
       sellingPrice: sellingPrice,
@@ -169,6 +176,7 @@ export default function PriceCalculator() {
       profit: finalProfit,
       commissionAmount: commissionAmount,
       orderFeeAmount: orderFeeAmount,
+      affiliateCommissionAmount,
       otherCosts: totalOtherCosts,
       platform: platform
     };
@@ -308,7 +316,7 @@ export default function PriceCalculator() {
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                                 <FormControl>
-                                  <Input type="number" placeholder="0" className="pl-8 w-32" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                                  <Input type="number" placeholder="0" className="pl-8 w-32" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
                                 </FormControl>
                               </div>
                               <FormMessage />
@@ -334,7 +342,7 @@ export default function PriceCalculator() {
                     control={form.control}
                     name="discount"
                     render={({ field }) => (
-                      <FormItem className="md:col-span-2">
+                      <FormItem>
                         <FormLabel>6. ส่วนลด (บาท)</FormLabel>
                         <div className="relative">
                           <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -344,6 +352,25 @@ export default function PriceCalculator() {
                         </div>
                         <FormDescription>
                           ส่วนลดนี้จะถูกบวกเข้าไปในราคาขายเพื่อรักษากำไร
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="affiliateCommission"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>7. ค่าคอม Affiliate (%)</FormLabel>
+                        <div className="relative">
+                          <Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <FormControl>
+                            <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
+                          </FormControl>
+                        </div>
+                        <FormDescription>
+                          ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -396,12 +423,23 @@ export default function PriceCalculator() {
                        <p className="text-2xl font-semibold text-green-600 mt-1 text-center">{result.profit.toFixed(2)}</p>
                     </div>
                   </div>
-                  {result.otherCosts > 0 && (
-                     <div className="p-4 bg-muted/50 rounded-lg md:col-span-2">
-                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p>
-                       <p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p>
+                  {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {result.otherCosts > 0 && (
+                         <div className="p-4 bg-muted/50 rounded-lg">
+                           <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p>
+                           <p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p>
+                        </div>
+                      )}
+                      {result.affiliateCommissionAmount > 0 && (
+                         <div className={`p-4 bg-muted/50 rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}>
+                           <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p>
+                           <p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.affiliateCommissionAmount.toFixed(2)}</p>
+                        </div>
+                      )}
                     </div>
                   )}
+
                   <Alert variant="default" className="mt-4">
                       <Info className="h-4 w-4" />
                       <AlertTitle>ข้อควรทราบ</AlertTitle>
@@ -418,3 +456,5 @@ export default function PriceCalculator() {
     </div>
   );
 }
+
+    
