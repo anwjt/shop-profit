@@ -515,7 +515,7 @@ export default function PriceCalculator() {
                     ราคาแนะนำสำหรับช่องทางชำระเงินเพิ่มเติม (Shopee)
                 </CardTitle>
                 <CardDescription className="text-center">
-                    ราคาโดยประมาณเมื่อลูกค้่าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)
+                    ราคาโดยประมาณเมื่อลูกค้าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -551,3 +551,4 @@ export default function PriceCalculator() {
   );
 
     
+
