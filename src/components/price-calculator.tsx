@@ -95,7 +95,12 @@ type CalculationResult = {
   affiliateCommissionAmount: number;
   otherCosts: number;
   platform: string;
+  commissionPercent: number;
+  orderFeePercent: number;
+  priceForFeeCalculation: number;
+  discount: number;
 };
+
 
 export default function PriceCalculator() {
   const [result, setResult] = useState<CalculationResult | null>(null);
@@ -187,7 +192,11 @@ export default function PriceCalculator() {
       orderFeeAmount: orderFeeAmount,
       affiliateCommissionAmount,
       otherCosts: totalOtherCosts,
-      platform: platform
+      platform: platform,
+      commissionPercent,
+      orderFeePercent,
+      priceForFeeCalculation,
+      discount
     };
     setResult(newResult);
     setIsLoading(false);
@@ -420,11 +429,15 @@ export default function PriceCalculator() {
                     <div className="p-4 bg-muted/50 rounded-lg">
                        <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม</p>
                         <p className="text-2xl font-semibold text-foreground text-center">{result.platformFeeAmount.toFixed(2)}</p>
-                         <div className="text-xs text-muted-foreground mt-2 space-y-1 text-center">
-                            <p>ค่าคอมมิชชั่น: {result.commissionAmount.toFixed(2)}</p>
-                            {result.orderFeeAmount > 0 && (
-                                <p>ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeeAmount.toFixed(2)}</p>
-                            )}
+                        <div className="text-xs text-muted-foreground mt-2 space-y-1 text-center">
+                          <p>
+                            ค่าคอมมิชชั่น: {result.commissionPercent}% of ({result.sellingPrice.toFixed(2)} - {result.discount.toFixed(2)}) = {result.commissionAmount.toFixed(2)}
+                          </p>
+                          {result.orderFeeAmount > 0 && (
+                            <p>
+                              ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent}% of ({result.sellingPrice.toFixed(2)} - {result.discount.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}
+                            </p>
+                          )}
                         </div>
                     </div>
                      <div className="p-4 bg-muted/50 rounded-lg">
