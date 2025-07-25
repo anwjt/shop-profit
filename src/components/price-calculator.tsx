@@ -42,20 +42,27 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { suggestPsychologicalPrice, SuggestPsychologicalPriceOutput } from '@/ai/flows/suggest-pricing';
-import { Badge } from './ui/badge';
-import { Lightbulb } from 'lucide-react';
 
 // Platform fees for NON-MALL sellers (approximations, should be verified)
-const PLATFORM_FEES: { [key: string]: { [key: string]: number } } = {
+// These fees are a combination of Transaction fees and any applicable service/commission fees.
+const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number } } } = {
   shopee: {
-    'all-categories': 4.28, // Transaction Fee 2.14% + Program Fee ~2.14%
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 5.35 },
+    'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42 },
+    'fmcg': { name: 'สินค้าอุปโภคบริโภค (FMCG)', fee: 6.42 },
+    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 6.42 },
+    'other': { name: 'หมวดหมู่อื่นๆ', fee: 5.35 },
   },
   lazada: {
-    'all-categories': 3.21, // Payment Fee 3.21%
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 4.28 },
+    'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42 },
+    'general': { name: 'สินค้าทั่วไป', fee: 5.35 },
   },
   tiktok: {
-    'all-categories': 7.35, // Commission Fee 4% + Transaction Fee ~3.35% (incl. VAT)
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 7.35 },
+    'fashion': { name: 'สินค้าแฟชั่น', fee: 8.42 },
+    'fmcg': { name: 'สินค้าอุปโภคบริโภค (FMCG)', fee: 8.42 },
+    'other': { name: 'หมวดหมู่อื่นๆ', fee: 8.42 },
   },
 };
 
@@ -97,12 +104,7 @@ export default function PriceCalculator() {
     if (selectedPlatform && PLATFORM_FEES[selectedPlatform]) {
       const availableCategories = Object.keys(PLATFORM_FEES[selectedPlatform]);
       setCategories(availableCategories);
-      // Automatically select the first category if there's only one
-      if (availableCategories.length === 1) {
-        form.setValue('category', availableCategories[0]);
-      } else {
-        form.resetField('category');
-      }
+      form.resetField('category');
     } else {
       setCategories([]);
     }
@@ -116,15 +118,13 @@ export default function PriceCalculator() {
 
     const { cost, profitMargin, otherCosts = 0, platform, category } = values;
     
-    // Ensure category exists for the platform before proceeding
     if (!PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
         console.error("Invalid platform or category selected");
         setIsLoading(false);
-        // Optionally, set an error state to show in the UI
         return;
     }
 
-    const platformFeePercent = PLATFORM_FEES[platform][category];
+    const platformFeePercent = PLATFORM_FEES[platform][category].fee;
     const totalCost = cost + otherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
@@ -141,11 +141,8 @@ export default function PriceCalculator() {
     setIsLoading(false);
   }
 
-  const getCategoryLabel = (categoryKey: string) => {
-    switch (categoryKey) {
-      case 'all-categories': return 'สินค้าทุกหมวดหมู่ (ร้านค้าทั่วไป)';
-      default: return categoryKey;
-    }
+  const getCategoryLabel = (platform: string, categoryKey: string) => {
+    return PLATFORM_FEES[platform]?.[categoryKey]?.name || categoryKey;
   }
 
   return (
@@ -213,13 +210,13 @@ export default function PriceCalculator() {
                         <FormControl>
                           <SelectTrigger>
                              <LayoutGrid className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                            <SelectValue placeholder="เลือกประเภท" />
+                            <SelectValue placeholder="เลือกหมวดหมู่สินค้า" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {categories.map((cat) => (
                             <SelectItem key={cat} value={cat}>
-                              {getCategoryLabel(cat)} (ค่าธรรมเนียม ~{PLATFORM_FEES[selectedPlatform]?.[cat]}%)
+                              {getCategoryLabel(selectedPlatform, cat)} (ค่าธรรมเนียม ~{PLATFORM_FEES[selectedPlatform]?.[cat].fee}%)
                             </SelectItem>
                           ))}
                         </SelectContent>
