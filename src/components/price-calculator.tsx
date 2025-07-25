@@ -22,6 +22,7 @@ import {
   Sparkles,
   BookMarked,
   RotateCcw,
+  History,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -95,7 +96,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-type CalculationResult = {
+export type CalculationResult = {
   sellingPrice: number;
   platformFeeAmount: number;
   profit: number;
@@ -152,6 +153,18 @@ export default function PriceCalculator() {
     if (denominator <= 0) return 0;
     return numerator / denominator;
   }
+  
+  const saveToHistory = (resultToSave: CalculationResult) => {
+    try {
+        const currentHistoryString = localStorage.getItem('calculationHistory');
+        const currentHistory = currentHistoryString ? JSON.parse(currentHistoryString) : [];
+        const newEntry = { ...resultToSave, date: new Date().toISOString() };
+        const updatedHistory = [newEntry, ...currentHistory].slice(0, 50); // Limit history to 50 entries
+        localStorage.setItem('calculationHistory', JSON.stringify(updatedHistory));
+    } catch (error) {
+        console.error("Failed to save to localStorage", error);
+    }
+  };
 
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
@@ -198,6 +211,7 @@ export default function PriceCalculator() {
       discount, totalCost, ...shopeePrices,
     };
     setResult(newResult);
+    saveToHistory(newResult);
     setIsLoading(false);
   }
 
@@ -209,7 +223,12 @@ export default function PriceCalculator() {
   return (
     <div className="w-full max-w-4xl space-y-4">
       <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20 relative">
-         <div className="absolute top-4 right-4">
+         <div className="absolute top-4 right-4 flex items-center gap-1">
+            <Button variant="ghost" size="icon" asChild>
+                <Link href="/history" title="ประวัติการคำนวณ">
+                    <History className="h-5 w-5 text-muted-foreground" />
+                </Link>
+            </Button>
             <Button variant="ghost" size="icon" asChild>
                 <Link href="/docs" title="คู่มือการใช้งาน">
                     <BookMarked className="h-5 w-5 text-muted-foreground" />
