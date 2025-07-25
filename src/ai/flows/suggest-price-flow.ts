@@ -37,8 +37,9 @@ export async function suggestPrice(input: SuggestPriceInput): Promise<SuggestPri
   return suggestPriceFlow(input);
 }
 
-const सझावPrompt = ai.definePrompt({
+const suggestPricePrompt = ai.definePrompt({
   name: 'suggestPricePrompt',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: { schema: SuggestPriceInputSchema },
   output: { schema: SuggestPriceOutputSchema },
   prompt: `You are an expert e-commerce pricing strategist.
@@ -66,7 +67,7 @@ const suggestPriceFlow = ai.defineFlow(
     outputSchema: SuggestPriceOutputSchema,
   },
   async (input) => {
-    const { output } = await सझावPrompt(input);
+    const { output } = await suggestPricePrompt(input);
     return output!;
   }
 );
