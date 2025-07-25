@@ -4,7 +4,7 @@ import serviceAccount from '../../serviceAccountKey.json';
 if (!admin.apps.length) {
   try {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     });
   } catch (error) {
     console.error('Firebase admin initialization error', error);
