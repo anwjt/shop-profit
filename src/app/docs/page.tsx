@@ -21,7 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArrowLeft, BookMarked, Calculator, Percent, ShieldCheck } from "lucide-react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { ArrowLeft, BookMarked, Calculator, CreditCard, Percent, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function DocsPage() {
@@ -82,46 +88,79 @@ export default function DocsPage() {
                             <span className="font-semibold text-foreground">ค่าธรรมเนียมธุรกรรมการชำระเงิน (Transaction Fee):</span> หักจากยอดรวมที่ผู้ซื้อชำระ (รวมค่าขนส่ง) ผ่านทุกช่องทางการชำระเงิน <span className="font-bold">เครื่องมือของเรารวมค่าธรรมเนียมส่วนนี้เข้าไปในค่าคอมมิชชั่นหลักแล้ว (ประมาณ 3.21%)</span> เพื่อให้การคำนวณครอบคลุมมากที่สุด
                         </li>
                         <li>
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมผ่อนชำระ (Installment Fee):</span> สำหรับร้านค้าที่เข้าร่วมโปรแกรมผ่อนชำระผ่านบัตรเครดิต หรือ SPayLater
+                        </li>
+                        <li>
                             <span className="font-semibold text-foreground">ราคานี้รวมภาษีมูลค่าเพิ่ม (VAT 7%) แล้ว</span>
                         </li>
                     </ul>
-                     <Table className="mt-4">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>หมวดหมู่สินค้า</TableHead>
-                          <TableHead className="text-right">ค่าคอมฯ</TableHead>
-                          <TableHead className="text-right">ค่าธุรกรรม</TableHead>
-                          <TableHead className="text-right">รวม (ที่ใช้ในแอป)</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>สินค้าแฟชั่น</TableCell>
-                          <TableCell className="text-right">9.63%</TableCell>
-                          <TableCell className="text-right">~3.21%</TableCell>
-                          <TableCell className="text-right font-bold">~12.84%</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>สินค้าอิเล็กทรอนิกส์</TableCell>
-                          <TableCell className="text-right">8.56%</TableCell>
-                          <TableCell className="text-right">~3.21%</TableCell>
-                           <TableCell className="text-right font-bold">~11.77%</TableCell>
-                        </TableRow>
-                         <TableRow>
-                          <TableCell>สินค้าไลฟ์สไตล์</TableCell>
-                          <TableCell className="text-right">8.025%</TableCell>
-                           <TableCell className="text-right">~3.21%</TableCell>
-                           <TableCell className="text-right font-bold">~11.24%</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>สินค้าทั่วไป (นอกกลุ่มอิเล็กฯ)</TableCell>
-                          <TableCell className="text-right">8.56%</TableCell>
-                           <TableCell className="text-right">~3.21%</TableCell>
-                          <TableCell className="text-right font-bold">~11.77%</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                    <p className="mt-4 text-xs text-muted-foreground">*หมายเหตุ: สำหรับการผ่อนชำระผ่านบัตรเครดิต/SPayLater จะมีค่าธรรมเนียมเพิ่มเติม ซึ่งจะแสดงแยกในผลการคำนวณ</p>
+                    <Tabs defaultValue="main" className="w-full mt-4">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="main">ค่าธรรมเนียมหลัก</TabsTrigger>
+                        <TabsTrigger value="installment">
+                          <CreditCard className="mr-2" />ค่าผ่อนชำระ
+                        </TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="main">
+                        <Table className="mt-4">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>หมวดหมู่สินค้า</TableHead>
+                              <TableHead className="text-right">ค่าคอมฯ</TableHead>
+                              <TableHead className="text-right">ค่าธุรกรรม</TableHead>
+                              <TableHead className="text-right">รวม (ที่ใช้ในแอป)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell>สินค้าแฟชั่น</TableCell>
+                              <TableCell className="text-right">9.63%</TableCell>
+                              <TableCell className="text-right">~3.21%</TableCell>
+                              <TableCell className="text-right font-bold">~12.84%</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>สินค้าอิเล็กทรอนิกส์</TableCell>
+                              <TableCell className="text-right">8.56%</TableCell>
+                              <TableCell className="text-right">~3.21%</TableCell>
+                              <TableCell className="text-right font-bold">~11.77%</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>สินค้าไลฟ์สไตล์</TableCell>
+                              <TableCell className="text-right">8.025%</TableCell>
+                              <TableCell className="text-right">~3.21%</TableCell>
+                              <TableCell className="text-right font-bold">~11.24%</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>สินค้าทั่วไป (นอกกลุ่มอิเล็กฯ)</TableCell>
+                              <TableCell className="text-right">8.56%</TableCell>
+                              <TableCell className="text-right">~3.21%</TableCell>
+                              <TableCell className="text-right font-bold">~11.77%</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </TabsContent>
+                      <TabsContent value="installment">
+                         <Table className="mt-4">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>ช่องทางการชำระเงิน</TableHead>
+                              <TableHead className="text-right">ค่าธรรมเนียมเพิ่มเติม (สูงสุด)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell>ผ่อนชำระผ่านบัตรเครดิต</TableCell>
+                              <TableCell className="text-right font-bold">6.42%</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>SPayLater</TableCell>
+                              <TableCell className="text-right font-bold">6.42%</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                         <p className="mt-2 text-xs text-muted-foreground">*ค่าธรรมเนียมนี้จะถูกบวกเพิ่มจากค่าธรรมเนียมหลักเมื่อลูกค้าเลือกชำระเงินด้วยวิธีดังกล่าว ซึ่งในหน้าเครื่องคำนวณจะมีการแสดงราคาแนะนำสำหรับกรณีนี้แยกไว้ให้</p>
+                      </TabsContent>
+                    </Tabs>
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="lazada">
@@ -248,5 +287,3 @@ export default function DocsPage() {
     </main>
   );
 }
-
-    
