@@ -13,7 +13,7 @@ import {
   Wallet,
   Store,
   LayoutGrid,
-  Lightbulb
+  Info
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -81,6 +81,9 @@ type CalculationResult = {
   sellingPrice: number;
   platformFeeAmount: number;
   profit: number;
+  commissionAmount: number;
+  orderFeeAmount: number;
+  platform: string;
 };
 
 export default function PriceCalculator() {
@@ -132,14 +135,8 @@ export default function PriceCalculator() {
     const totalCost = cost + otherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
-    let sellingPrice = 0;
-    
-    // Different calculation for TikTok
-    if (platform === 'tiktok') {
-        sellingPrice = (totalCost + profitAmount) / (1 - (commissionPercent / 100) - (orderFeePercent / 100));
-    } else {
-        sellingPrice = (totalCost + profitAmount) / (1 - (commissionPercent / 100));
-    }
+    // Formula: Selling Price = (Total Cost + Desired Profit) / (1 - Total Fee Percentage)
+    const sellingPrice = (totalCost + profitAmount) / (1 - (commissionPercent / 100) - (orderFeePercent / 100));
 
     const commissionAmount = sellingPrice * (commissionPercent / 100);
     const orderFeeAmount = sellingPrice * (orderFeePercent / 100);
@@ -147,10 +144,13 @@ export default function PriceCalculator() {
     
     const finalProfit = sellingPrice - totalCost - totalPlatformFee;
 
-    const newResult = {
+    const newResult: CalculationResult = {
       sellingPrice: sellingPrice,
       platformFeeAmount: totalPlatformFee,
       profit: finalProfit,
+      commissionAmount: commissionAmount,
+      orderFeeAmount: orderFeeAmount,
+      platform: platform
     };
     setResult(newResult);
     setIsLoading(false);
@@ -229,10 +229,11 @@ export default function PriceCalculator() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {categories.map((cat) => {
-                            const platformCategory = selectedPlatform ? PLATFORM_FEES[selectedPlatform]?.[cat] : null;
+                           {categories.map((cat) => {
+                            if (!selectedPlatform) return null;
+                            const platformCategory = PLATFORM_FEES[selectedPlatform]?.[cat];
                             if (!platformCategory) return null;
-                            const feeLabel = selectedPlatform === 'tiktok'
+                            const feeLabel = platformCategory.orderFee
                                ? `~${platformCategory.fee}% + ${platformCategory.orderFee}%`
                                : `~${platformCategory.fee}%`;
                             return (
@@ -310,16 +311,29 @@ export default function PriceCalculator() {
                       {result.sellingPrice.toFixed(2)}
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-muted/50 rounded-lg">
-                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์ม</p>
-                       <p className="text-2xl font-semibold text-foreground mt-1">{result.platformFeeAmount.toFixed(2)}</p>
+                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม</p>
+                        <p className="text-2xl font-semibold text-foreground text-center">{result.platformFeeAmount.toFixed(2)}</p>
+                         <div className="text-xs text-muted-foreground mt-2 space-y-1 text-center">
+                            <p>ค่าคอมมิชชั่น: {result.commissionAmount.toFixed(2)}</p>
+                            {result.platform === 'tiktok' && (
+                                <p>ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeeAmount.toFixed(2)}</p>
+                            )}
+                        </div>
                     </div>
                      <div className="p-4 bg-muted/50 rounded-lg">
-                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Wallet />กำไรที่จะได้รับ</p>
-                       <p className="text-2xl font-semibold text-green-600 mt-1">{result.profit.toFixed(2)}</p>
+                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Wallet />กำไรที่จะได้รับ (โดยประมาณ)</p>
+                       <p className="text-2xl font-semibold text-green-600 mt-1 text-center">{result.profit.toFixed(2)}</p>
                     </div>
                   </div>
+                  <Alert variant="default" className="mt-4">
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>ข้อควรทราบ</AlertTitle>
+                      <AlertDescription>
+                          ราคานี้เป็นการคำนวณเบื้องต้น อาจมีการเปลี่ยนแปลงจากค่าธรรมเนียมส่งเสริมการขาย, ค่าขนส่ง, หรือส่วนลดอื่นๆ ของแพลตฟอร์ม
+                      </AlertDescription>
+                  </Alert>
                 </>
               )
             )}
