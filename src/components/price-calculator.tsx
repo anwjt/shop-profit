@@ -159,30 +159,67 @@ export default function PriceCalculator() {
     const totalCost = cost + totalOtherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
-    // Formula: Selling Price = (Total Cost + Desired Profit + Discount) / (1 - Total Fee Percentage - Affiliate Commission %)
-    const totalFeePercentage = (commissionPercent / 100) + (orderFeePercent / 100) + (affiliateCommission / 100);
+    // Revised Formula for accuracy:
+    // Let SP = Selling Price
+    // Let D = Discount
+    // Let C = Total Cost (Cost + Other Costs)
+    // Let P = Desired Profit Amount
+    // Let Aff = Affiliate Commission %
+    // Let PF = Platform Fee % (Commission % + Order Fee %)
+    // Profit = (SP - D) - C - (SP-D)*PF - SP*Aff
+    // We want to find SP such that Profit = P
+    // P = SP - D - C - SP*PF + D*PF - SP*Aff
+    // P + D + C - D*PF = SP - SP*PF - SP*Aff
+    // P + D + C - D*PF = SP * (1 - PF - Aff)
+    // SP = (P + D + C - D*PF) / (1 - PF - Aff)
+    // This is mathematically incorrect.
+
+    // Let's re-derive.
+    // Revenue = SP - D
+    // Expenses = C + (SP - D) * PF + SP * Aff
+    // Profit = Revenue - Expenses
+    // P = (SP - D) - (C + (SP - D) * PF + SP * Aff)
+    // P = SP - D - C - (SP-D)*PF - SP*Aff
+    // P + D + C - D*PF = SP - SP*PF - SP*Aff
+    // P + D + C - D*PF = SP * (1 - PF - Aff)
+    // SP = (P + C + D - D*PF) / (1 - PF - Aff)
+    // Wait, the affiliate is on the total price, not discounted.
+
+    // Let's try again.
+    // Final Price Customer Pays = SP - D
+    // Platform takes fee on (SP - D) -> (SP - D) * PF
+    // Affiliate takes fee on SP -> SP * Aff
+    // Your Gross Revenue = SP - D
+    // Your Net Profit (P) = Gross Revenue - Total Cost - Platform Fee - Affiliate Fee
+    // P = (SP - D) - C - ((SP-D) * PF) - (SP * Aff)
+    // P = SP - D - C - SP*PF + D*PF - SP*Aff
+    // P + D + C - D*PF = SP - SP*PF - SP*Aff
+    // P + D + C - D*PF = SP * (1 - PF - Aff)
+    // SP = (P + C + D - (D * PF)) / (1 - PF - Aff) -> This seems correct.
+
+    const platformFeeRate = (commissionPercent / 100) + (orderFeePercent / 100);
+    const affiliateRate = affiliateCommission / 100;
+
+    const numerator = totalCost + profitAmount + discount - (discount * platformFeeRate);
+    const denominator = 1 - platformFeeRate - affiliateRate;
+
     let sellingPrice = 0;
-    if (totalFeePercentage < 1) {
-        sellingPrice = (totalCost + profitAmount + discount) / (1 - totalFeePercentage);
+    if (denominator > 0) {
+      sellingPrice = numerator / denominator;
     } else {
-        // Handle case where total fees are 100% or more, which is not logical
-        console.error("Total fee percentage is 100% or more.");
-        setIsLoading(false);
-        return;
+      console.error("Total fee percentage is 100% or more.");
+      setIsLoading(false);
+      return;
     }
 
-
-    // For calculation and display purposes, the "price" the fee is based on is the selling price minus the seller's discount
     const priceForFeeCalculation = sellingPrice - discount;
     const commissionAmount = priceForFeeCalculation * (commissionPercent / 100);
-
-    // TikTok order fee is on the final selling price after discount
     const orderFeeAmount = priceForFeeCalculation * (orderFeePercent / 100);
     const totalPlatformFee = commissionAmount + orderFeeAmount;
     
-    const affiliateCommissionAmount = sellingPrice * (affiliateCommission / 100);
+    const affiliateCommissionAmount = sellingPrice * affiliateRate;
 
-    const finalProfit = sellingPrice - cost - totalOtherCosts - discount - totalPlatformFee - affiliateCommissionAmount;
+    const finalProfit = (sellingPrice - discount) - totalCost - totalPlatformFee - affiliateCommissionAmount;
 
     const newResult: CalculationResult = {
       sellingPrice: sellingPrice,
@@ -477,4 +514,5 @@ export default function PriceCalculator() {
       )}
     </div>
   );
-}
+
+    
