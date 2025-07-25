@@ -12,7 +12,8 @@ import {
   TrendingUp,
   Wallet,
   Store,
-  LayoutGrid
+  LayoutGrid,
+  Lightbulb
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 
 // Platform fees for NON-MALL sellers (approximations, should be verified)
 // These fees are a combination of Transaction fees and any applicable service/commission fees.
@@ -132,12 +135,12 @@ export default function PriceCalculator() {
     const platformFeeAmount = sellingPrice * (platformFeePercent / 100);
     const finalProfit = sellingPrice - totalCost - platformFeeAmount;
 
-    setResult({
+    const newResult = {
       sellingPrice: sellingPrice,
       platformFeeAmount: platformFeeAmount,
       profit: finalProfit,
-    });
-
+    };
+    setResult(newResult);
     setIsLoading(false);
   }
 
@@ -214,11 +217,15 @@ export default function PriceCalculator() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {getCategoryLabel(selectedPlatform, cat)} (ค่าธรรมเนียม ~{PLATFORM_FEES[selectedPlatform]?.[cat].fee}%)
-                            </SelectItem>
-                          ))}
+                          {categories.map((cat) => {
+                            const platformCategory = selectedPlatform ? PLATFORM_FEES[selectedPlatform]?.[cat] : null;
+                            if (!platformCategory) return null;
+                            return (
+                              <SelectItem key={cat} value={cat}>
+                                {platformCategory.name} (ค่าธรรมเนียม ~{platformCategory.fee}%)
+                              </SelectItem>
+                            )
+                          })}
                         </SelectContent>
                       </Select>
                       <FormMessage />
