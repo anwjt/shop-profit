@@ -27,8 +27,9 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { ArrowLeft, BookMarked, Calculator, Briefcase, CreditCard, Percent, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BookMarked, Calculator, Briefcase, CreditCard, Percent, ShieldCheck, Info } from "lucide-react";
 import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function DocsPage() {
   return (
@@ -381,6 +382,14 @@ export default function DocsPage() {
                 </AccordionItem>
               </Accordion>
             </section>
+            
+            <Alert variant="default" className="mt-4 bg-muted/50 border-transparent">
+              <Info className="h-4 w-4" />
+              <AlertTitle>ข้อจำกัดความรับผิดชอบ</AlertTitle>
+              <AlertDescription>
+                ราคาที่คำนวณได้เป็นเพียงการประมาณการจากข้อมูลพื้นฐาน และยังไม่รวมค่าใช้จ่ายหรือส่วนลดที่อาจเกิดขึ้นจากแคมเปญส่งเสริมการขายต่างๆ (เช่น ส่วนลดในเทศกาล, คูปองส่วนลดจากแพลตฟอร์ม) หรือค่าขนส่งพิเศษ โปรดตรวจสอบรายละเอียดของแคมเปญและค่าธรรมเนียมอื่นๆ เพิ่มเติมเพื่อให้ได้ราคาที่แม่นยำที่สุด
+              </AlertDescription>
+            </Alert>
 
              <div className="text-center pt-4">
                <Button asChild>
