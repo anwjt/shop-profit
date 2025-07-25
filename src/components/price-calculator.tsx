@@ -1,19 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
   Calculator,
   Percent,
-  PlusCircle,
   TrendingUp,
   Wallet,
   Store,
   LayoutGrid,
   Info,
   Package,
+  PlusCircle,
+  XCircle,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -71,7 +72,10 @@ const formSchema = z.object({
   platform: z.string({ required_error: 'กรุณาเลือกแพลตฟอร์ม' }),
   cost: z.coerce.number().min(0.01, 'ราคาต้นทุนต้องมากกว่า 0'),
   category: z.string({ required_error: 'กรุณาเลือกหมวดหมู่สินค้า' }),
-  otherCosts: z.coerce.number().min(0, 'ค่าใช้จ่ายอื่นต้องไม่ติดลบ').optional(),
+  otherCosts: z.array(z.object({
+    name: z.string().optional(),
+    value: z.coerce.number().min(0, 'ค่าใช้จ่ายต้องไม่ติดลบ'),
+  })).optional(),
   profitMargin: z.coerce.number().min(0, 'กำไรที่ต้องการต้องไม่ติดลบ'),
 });
 
@@ -98,9 +102,14 @@ export default function PriceCalculator() {
       platform: undefined,
       cost: undefined,
       category: undefined,
-      otherCosts: 0,
+      otherCosts: [],
       profitMargin: 0,
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "otherCosts",
   });
 
   const selectedPlatform = form.watch('platform');
@@ -121,7 +130,7 @@ export default function PriceCalculator() {
 
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const { cost, profitMargin, otherCosts = 0, platform, category } = values;
+    const { cost, profitMargin, otherCosts = [], platform, category } = values;
     
     if (!PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
         console.error("Invalid platform or category selected");
@@ -133,7 +142,8 @@ export default function PriceCalculator() {
     const commissionPercent = platformCategoryData.fee;
     const orderFeePercent = platformCategoryData.orderFee || 0;
 
-    const totalCost = cost + otherCosts;
+    const totalOtherCosts = otherCosts.reduce((sum, current) => sum + (current.value || 0), 0);
+    const totalCost = cost + totalOtherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
     // Formula: Selling Price = (Total Cost + Desired Profit) / (1 - Total Fee Percentage)
@@ -151,7 +161,7 @@ export default function PriceCalculator() {
       profit: finalProfit,
       commissionAmount: commissionAmount,
       orderFeeAmount: orderFeeAmount,
-      otherCosts: otherCosts,
+      otherCosts: totalOtherCosts,
       platform: platform
     };
     setResult(newResult);
@@ -250,23 +260,52 @@ export default function PriceCalculator() {
                     </FormItem>
                   )}
                 />
-                 <FormField
-                  control={form.control}
-                  name="otherCosts"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>4. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
-                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
-                        <FormControl>
-                          <Input type="number" placeholder="0" className="pl-8" {...field} />
-                        </FormControl>
-                      </div>
-                      <FormDescription>เช่น ค่าแพ็คของ, ค่าเดินทาง</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="md:col-span-1 space-y-4">
+                  <FormLabel>4. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <FormField
+                          control={form.control}
+                          name={`otherCosts.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem className="flex-grow">
+                               <FormControl>
+                                  <Input type="text" placeholder="เช่น ค่าแพ็คของ" {...field} />
+                               </FormControl>
+                               <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      <FormField
+                        control={form.control}
+                        name={`otherCosts.${index}.value`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
+                              <FormControl>
+                                <Input type="number" placeholder="0" className="pl-8 w-32" {...field} />
+                              </FormControl>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                        <XCircle className="h-5 w-5 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => append({ name: '', value: 0 })}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    เพิ่มรายการค่าใช้จ่าย
+                  </Button>
+                </div>
                 <FormField
                   control={form.control}
                   name="profitMargin"
@@ -320,7 +359,7 @@ export default function PriceCalculator() {
                         <p className="text-2xl font-semibold text-foreground text-center">{result.platformFeeAmount.toFixed(2)}</p>
                          <div className="text-xs text-muted-foreground mt-2 space-y-1 text-center">
                             <p>ค่าคอมมิชชั่น: {result.commissionAmount.toFixed(2)}</p>
-                            {result.platform === 'tiktok' && (
+                            {result.orderFeeAmount > 0 && (
                                 <p>ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeeAmount.toFixed(2)}</p>
                             )}
                         </div>
@@ -352,5 +391,3 @@ export default function PriceCalculator() {
     </div>
   );
 }
-
-    
