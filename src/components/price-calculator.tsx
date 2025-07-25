@@ -18,6 +18,8 @@ import {
   XCircle,
   BadgePercent,
   Handshake,
+  CreditCard,
+  Sparkles,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -50,13 +52,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
-// Platform fees for NON-MALL sellers (approximations, should be verified)
 const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number } } } = {
   shopee: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 8.56 },
-    'fashion': { name: 'สินค้าแฟชั่น', fee: 9.63 },
-    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 8.025 },
-    'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 },
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 8.56 }, // 8% + 7% VAT
+    'fashion': { name: 'สินค้าแฟชั่น', fee: 9.63 }, // 9% + 7% VAT
+    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 8.025 }, // 7.5% + 7% VAT
+    'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 }, // 8% + 7% VAT
   },
   lazada: {
     'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 4.28 },
@@ -68,6 +69,12 @@ const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: numb
     'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 5.35, orderFee: 3.21 },
     'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 5.35, orderFee: 3.21 },
   },
+};
+
+// Additional fees for Shopee payment methods (incl. VAT)
+const SHOPEE_EXTRA_FEES = {
+  creditCard: 0.06 * 1.07, // 6% (max rate) + 7% VAT
+  spayLater: 0.06 * 1.07, // 6% (max rate) + 7% VAT
 };
 
 const formSchema = z.object({
@@ -98,6 +105,8 @@ type CalculationResult = {
   orderFeePercent: number;
   priceForFeeCalculation: number;
   discount: number;
+  shopeeCreditCardPrice?: number;
+  shopeeSPayLaterPrice?: number;
 };
 
 
@@ -136,6 +145,17 @@ export default function PriceCalculator() {
     }
   }, [selectedPlatform, form]);
 
+  const calculateSellingPrice = (baseCost: number, profitAmount: number, discount: number, feeRate: number): number => {
+    const numerator = baseCost + profitAmount + discount - (discount * feeRate);
+    const denominator = 1 - feeRate;
+
+    if (denominator <= 0) {
+      console.error("Total fee percentage is 100% or more.");
+      return 0; // Or handle as an error
+    }
+    return numerator / denominator;
+  }
+
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
     setResult(null);
@@ -162,15 +182,9 @@ export default function PriceCalculator() {
     const affiliateRate = affiliateCommission / 100;
     
     const totalFeeRate = platformFeeRate + affiliateRate;
-
-    const numerator = totalCost + profitAmount + discount - (discount * totalFeeRate);
-    const denominator = 1 - totalFeeRate;
-
-    let sellingPrice = 0;
-    if (denominator > 0) {
-      sellingPrice = numerator / denominator;
-    } else {
-      console.error("Total fee percentage is 100% or more.");
+    
+    const sellingPrice = calculateSellingPrice(totalCost, profitAmount, discount, totalFeeRate);
+    if (sellingPrice === 0) {
       setIsLoading(false);
       return;
     }
@@ -184,6 +198,15 @@ export default function PriceCalculator() {
 
     const finalProfit = (sellingPrice - discount) - totalCost - totalPlatformFee - affiliateCommissionAmount;
 
+    let shopeePrices: { shopeeCreditCardPrice?: number, shopeeSPayLaterPrice?: number } = {};
+    if (platform === 'shopee') {
+      const creditCardFeeRate = totalFeeRate + SHOPEE_EXTRA_FEES.creditCard;
+      const spayLaterFeeRate = totalFeeRate + SHOPEE_EXTRA_FEES.spayLater;
+
+      shopeePrices.shopeeCreditCardPrice = calculateSellingPrice(totalCost, profitAmount, discount, creditCardFeeRate);
+      shopeePrices.shopeeSPayLaterPrice = calculateSellingPrice(totalCost, profitAmount, discount, spayLaterFeeRate);
+    }
+
     const newResult: CalculationResult = {
       sellingPrice: sellingPrice,
       platformFeeAmount: totalPlatformFee,
@@ -196,7 +219,8 @@ export default function PriceCalculator() {
       commissionPercent,
       orderFeePercent,
       priceForFeeCalculation,
-      discount
+      discount,
+      ...shopeePrices,
     };
     setResult(newResult);
     setIsLoading(false);
@@ -263,9 +287,13 @@ export default function PriceCalculator() {
                             if (!selectedPlatform) return null;
                             const platformCategory = PLATFORM_FEES[selectedPlatform]?.[cat];
                             if (!platformCategory) return null;
-                            const feeLabel = platformCategory.orderFee
-                               ? `~${platformCategory.fee}% + ${platformCategory.orderFee}%`
-                               : `~${platformCategory.fee}%`;
+                            let feeLabel = `~${platformCategory.fee}%`;
+                            if (platform === 'shopee') {
+                                feeLabel = `${feeLabel} (รวม VAT)`;
+                            } else if (platformCategory.orderFee) {
+                                feeLabel = `~${platformCategory.fee}% + ${platformCategory.orderFee}%`
+                            }
+
                             return (
                               <SelectItem key={cat} value={cat}>
                                 {platformCategory.name} (ค่าธรรมเนียม {feeLabel})
@@ -320,7 +348,7 @@ export default function PriceCalculator() {
                             render={({ field }) => (
                               <FormItem className="flex-grow">
                                 <FormControl>
-                                    <Input type="text" placeholder="เช่น ค่าแพ็คของ" {...field} />
+                                    <Input type="text" placeholder="เช่น ค่าแพ็คของ" {...field} value={field.value ?? ''} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -475,11 +503,46 @@ export default function PriceCalculator() {
           </CardContent>
         </Card>
       )}
+
+      {result && result.platform === 'shopee' && (
+        <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
+            <CardHeader>
+                <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
+                    <Sparkles className="h-6 w-6 text-yellow-500" />
+                    ราคาแนะนำสำหรับช่องทางชำระเงินเพิ่มเติม (Shopee)
+                </CardTitle>
+                <CardDescription className="text-center">
+                    ราคาโดยประมาณเมื่อลูกค้่าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="text-center p-6 bg-muted/50 rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
+                        <CreditCard /> บัตรเครดิต (ผ่อนชำระ)
+                    </p>
+                    <p className="text-4xl font-bold text-primary tracking-tight">
+                      {result.shopeeCreditCardPrice?.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-center p-6 bg-muted/50 rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
+                        <Sparkles className="h-4 w-4" /> SPayLater
+                    </p>
+                    <p className="text-4xl font-bold text-primary tracking-tight">
+                      {result.shopeeSPayLaterPrice?.toFixed(2)}
+                    </p>
+                  </div>
+                   <div className="md:col-span-2">
+                     <Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-xs">
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>ข้อควรทราบ</AlertTitle>
+                      <AlertDescription>
+                          ราคาที่แสดงเป็นเพียง **การประมาณการ** โดยใช้อัตราค่าธรรมเนียมสูงสุด และยัง **ไม่รวมค่าขนส่ง** หรือ **ส่วนลดที่ Shopee รับผิดชอบ** ซึ่งอาจส่งผลให้ราคาจริงมีการเปลี่ยนแปลงได้
+                      </AlertDescription>
+                  </Alert>
+                  </div>
+            </CardContent>
+        </Card>
+      )}
     </div>
   );
-
-    
-
-    
-
-    
