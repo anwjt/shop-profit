@@ -49,7 +49,7 @@ export async function suggestPrice(input: SuggestPriceInput): Promise<SuggestPri
 
 const suggestPricePrompt = ai.definePrompt({
   name: 'suggestPricePrompt',
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-2.0-flash-preview',
   input: { schema: SuggestPriceInputSchema },
   output: { schema: SuggestPriceOutputSchema },
   prompt: `You are an expert Thai e-commerce pricing strategist.
