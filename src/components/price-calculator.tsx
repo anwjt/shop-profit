@@ -30,8 +30,9 @@ import {
 } from 'lucide-react';
 import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 
-import { auth } from '@/lib/firebase';
-import { saveApiKey, getApiKey } from '@/app/actions';
+import { auth, firestore } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from "firebase/firestore";
+
 
 import { Button } from '@/components/ui/button';
 import {
@@ -148,6 +149,39 @@ type CalculationResult = {
   totalCost: number;
 };
 
+// Extracted Actions
+async function saveApiKey(uid: string, apiKey: string) {
+  try {
+    const userDocRef = doc(firestore, 'users', uid);
+    await setDoc(userDocRef, { apiKey }, { merge: true });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error saving API key:', error);
+    return { success: false, error: 'Could not save API key.', details: `${error.message} \n ${error.stack}` };
+  }
+}
+
+async function getApiKey(uid: string): Promise<string | null> {
+  try {
+    const userDocRef = doc(firestore, 'users', uid);
+    const docSnap = await getDoc(userDocRef);
+    if (docSnap.exists()) {
+      return docSnap.data()?.apiKey || null;
+    }
+    return null;
+  } catch (error: any) {
+    console.error('Error getting API key:', error);
+    return null;
+  }
+}
+
+const thinkingMessages = [
+  "กำลังวิเคราะห์ข้อมูลสินค้าของคุณ...",
+  "พิจารณากลยุทธ์ราคาบนแพลตฟอร์ม...",
+  "ประเมินราคาที่เหมาะสมทางจิตวิทยา...",
+  "กำลังสร้างข้อเสนอแนะราคาที่ดีที่สุด...",
+];
+
 export default function PriceCalculator() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -161,6 +195,7 @@ export default function PriceCalculator() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [thinkingMessage, setThinkingMessage] = useState(thinkingMessages[0]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -178,6 +213,19 @@ export default function PriceCalculator() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isSuggesting) {
+      let index = 0;
+      interval = setInterval(() => {
+        index = (index + 1) % thinkingMessages.length;
+        setThinkingMessage(thinkingMessages[index]);
+      }, 2500);
+    }
+    return () => clearInterval(interval);
+  }, [isSuggesting]);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -221,10 +269,8 @@ export default function PriceCalculator() {
       const result = await signInWithPopup(auth, provider);
       const key = await getApiKey(result.user.uid);
       if (!key) {
-        // After successful sign-in, if no key, open API dialog
         setIsApiDialogOpen(true);
       } else {
-        // If user has key, proceed to suggestion form
         setIsSuggestDialogOpen(true);
       }
     } catch (error: any) {
@@ -260,7 +306,6 @@ export default function PriceCalculator() {
         title: 'บันทึกสำเร็จ',
         description: 'API Key ของคุณถูกบันทึกเรียบร้อยแล้ว',
       });
-      // After saving key, open the suggestion dialog
       setIsSuggestDialogOpen(true);
     } else {
       toast({
@@ -553,7 +598,7 @@ export default function PriceCalculator() {
                   {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{result.otherCosts > 0 && (<div className="p-4 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p></div>)}{result.affiliateCommissionAmount > 0 && (<div className={`p-4 bg-muted/50 rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.affiliateCommissionAmount.toFixed(2)}</p></div>)}</div>)}
                   <Alert variant="default" className="mt-4 bg-muted/50 border-transparent"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคานี้เป็นการคำนวณเบื้องต้น อาจมีการเปลี่ยนแปลงจากค่าธรรมเนียมส่งเสริมการขาย, ค่าขนส่ง, หรือส่วนลดอื่นๆ ของแพลตฟอร์ม</AlertDescription></Alert>
                   
-                  {!suggestion && (
+                  {!suggestion && !isSuggesting &&(
                     <>
                       <Button
                         variant="outline"
@@ -591,7 +636,7 @@ export default function PriceCalculator() {
         </Card>
       )}
 
-      {isSuggesting && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Lightbulb className="h-6 w-6 text-yellow-500" />กำลังวิเคราะห์ราคา...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-24"><Skeleton className="h-8 w-3/4 mx-auto" /></CardContent></Card>)}
+      {isSuggesting && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Lightbulb className="h-6 w-6 text-yellow-500 animate-pulse" />กำลังวิเคราะห์ราคา...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-24"><p className="text-muted-foreground text-center animate-pulse">{thinkingMessage}</p></CardContent></Card>)}
       
       {suggestion && suggestion.shouldSuggest && suggestion.suggestedPrice && (
         <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
