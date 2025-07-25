@@ -223,15 +223,17 @@ export default function PriceCalculator() {
   return (
     <div className="w-full max-w-4xl space-y-4">
       <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20 relative">
-         <div className="absolute top-4 right-4 flex items-center gap-1">
-            <Button variant="ghost" size="icon" asChild>
-                <Link href="/history" title="ประวัติการคำนวณ">
-                    <History className="h-5 w-5 text-muted-foreground" />
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+                <Link href="/history">
+                    <History className="mr-2 h-4 w-4" />
+                    ประวัติ
                 </Link>
             </Button>
-            <Button variant="ghost" size="icon" asChild>
-                <Link href="/docs" title="คู่มือการใช้งาน">
-                    <BookMarked className="h-5 w-5 text-muted-foreground" />
+            <Button variant="outline" size="sm" asChild>
+                <Link href="/docs">
+                    <BookMarked className="mr-2 h-4 w-4" />
+                    คู่มือ
                 </Link>
             </Button>
         </div>
