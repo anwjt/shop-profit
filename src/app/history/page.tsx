@@ -26,6 +26,10 @@ type HistoryItem = CalculationResult & {
     date: string;
 };
 
+const formatPrice = (price: number) => {
+    return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
@@ -94,10 +98,10 @@ export default function HistoryPage() {
                             <TableRow key={index}>
                                 <TableCell>{new Date(item.date).toLocaleDateString('th-TH')}</TableCell>
                                 <TableCell>{getPlatformName(item.platform)}</TableCell>
-                                <TableCell className="text-right">{item.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell className="text-right font-bold">{item.sellingPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell className="text-right text-red-600">{`-${item.platformFeeAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</TableCell>
-                                <TableCell className="text-right text-green-600">{item.profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-right">{formatPrice(item.totalCost)}</TableCell>
+                                <TableCell className="text-right font-bold">{formatPrice(item.sellingPrice)}</TableCell>
+                                <TableCell className="text-right text-red-600">{`-${formatPrice(item.platformFeeAmount)}`}</TableCell>
+                                <TableCell className="text-right text-green-600">{formatPrice(item.profit)}</TableCell>
                             </TableRow>
                             ))}
                         </TableBody>
