@@ -53,11 +53,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 // Platform fees for NON-MALL sellers (approximations, should be verified)
 const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number } } } = {
   shopee: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 5.35 },
-    'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42 },
-    'fmcg': { name: 'สินค้าอุปโภคบริโภค (FMCG)', fee: 6.42 },
-    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 6.42 },
-    'other': { name: 'หมวดหมู่อื่นๆ', fee: 5.35 },
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 8.56 },
+    'fashion': { name: 'สินค้าแฟชั่น', fee: 9.63 },
+    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 8.025 },
+    'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 },
   },
   lazada: {
     'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 4.28 },
@@ -164,7 +163,7 @@ export default function PriceCalculator() {
     
     const totalFeeRate = platformFeeRate + affiliateRate;
 
-    const numerator = totalCost + profitAmount + discount - (discount * platformFeeRate);
+    const numerator = totalCost + profitAmount + discount - (discount * totalFeeRate);
     const denominator = 1 - totalFeeRate;
 
     let sellingPrice = 0;
@@ -432,11 +431,11 @@ export default function PriceCalculator() {
                         <p className="text-2xl font-semibold text-foreground text-center">{result.platformFeeAmount.toFixed(2)}</p>
                         <div className="text-xs text-muted-foreground mt-2 space-y-1 text-center">
                           <p>
-                            ค่าคอมมิชชั่น: {result.commissionPercent}% of ({result.sellingPrice.toFixed(2)} - {result.discount.toFixed(2)}) = {result.commissionAmount.toFixed(2)}
+                            ค่าคอมมิชชั่น: {result.commissionPercent}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.commissionAmount.toFixed(2)}
                           </p>
                           {result.orderFeeAmount > 0 && (
                             <p>
-                              ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent}% of ({result.sellingPrice.toFixed(2)} - {result.discount.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}
+                              ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}
                             </p>
                           )}
                         </div>
@@ -478,6 +477,8 @@ export default function PriceCalculator() {
       )}
     </div>
   );
+
+    
 
     
 
