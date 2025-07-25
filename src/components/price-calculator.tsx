@@ -99,9 +99,9 @@ export default function PriceCalculator() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      platform: undefined,
-      cost: undefined,
-      category: undefined,
+      platform: '',
+      cost: undefined, // Let it be undefined so placeholder shows
+      category: '',
       otherCosts: [],
       profitMargin: 0,
     },
@@ -118,7 +118,7 @@ export default function PriceCalculator() {
     if (selectedPlatform && PLATFORM_FEES[selectedPlatform]) {
       const availableCategories = Object.keys(PLATFORM_FEES[selectedPlatform]);
       setCategories(availableCategories);
-      form.resetField('category');
+      form.setValue('category', ''); // Use setValue to clear category
     } else {
       setCategories([]);
     }
@@ -132,7 +132,7 @@ export default function PriceCalculator() {
 
     const { cost, profitMargin, otherCosts = [], platform, category } = values;
     
-    if (!PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
+    if (!platform || !category || !PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
         console.error("Invalid platform or category selected");
         setIsLoading(false);
         return;
@@ -194,7 +194,7 @@ export default function PriceCalculator() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>1. เลือกแพลตฟอร์ม</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <Store className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
@@ -220,7 +220,7 @@ export default function PriceCalculator() {
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                         <FormControl>
-                          <Input type="number" placeholder="100" className="pl-8" {...field} />
+                          <Input type="number" placeholder="100" className="pl-8" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -284,7 +284,7 @@ export default function PriceCalculator() {
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                               <FormControl>
-                                <Input type="number" placeholder="0" className="pl-8 w-32" {...field} />
+                                <Input type="number" placeholder="0" className="pl-8 w-32" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                               </FormControl>
                             </div>
                             <FormMessage />
@@ -315,7 +315,7 @@ export default function PriceCalculator() {
                       <div className="relative">
                         <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <FormControl>
-                          <Input type="number" placeholder="20" className="pl-10" {...field} />
+                          <Input type="number" placeholder="20" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
