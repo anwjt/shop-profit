@@ -44,27 +44,33 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// ค่าธรรมเนียมตามหมวดหมู่สำหรับแต่ละแพลตฟอร์ม (ตัวอย่าง)
+// Updated platform fees (approximations, should be verified)
 const PLATFORM_FEES: { [key: string]: { [key: string]: number } } = {
   shopee: {
-    electronics: 8.5,
-    fashion: 7.5,
-    'health-beauty': 8.0,
-    other: 7.0,
+    'non-mall': 4.28, // Transaction Fee 2.14% + Program Fee ~2.14%
+    mall: 7.49, // Commission Fee ~5.35% + Transaction Fee 2.14%
+    electronics: 8.56, // Higher commission for electronics in Mall
+    fashion: 7.49,
+    'health-beauty': 7.49,
+    other: 6.42,
   },
   lazada: {
-    electronics: 7.5,
-    fashion: 6.5,
-    'health-beauty': 7.0,
-    other: 6.0,
+    marketplace: 3.21, // Payment Fee 3.21%
+    lazmall: 6.42, // LazMall Commission ~3.21% + Payment Fee 3.21%
+    electronics: 8.56, // Higher commission for electronics in LazMall
+    fashion: 6.42,
+    'health-beauty': 6.42,
+    other: 5.35,
   },
   tiktok: {
-    electronics: 9.0,
-    fashion: 8.0,
-    'health-beauty': 8.5,
-    other: 7.5,
+    all: 7.35, // Commission Fee 4% + Transaction Fee 3% + VAT
+    electronics: 7.35,
+    fashion: 7.35,
+    'health-beauty': 7.35,
+    other: 7.35,
   },
 };
+
 
 const formSchema = z.object({
   platform: z.string({ required_error: 'กรุณาเลือกแพลตฟอร์ม' }),
@@ -122,6 +128,7 @@ export default function PriceCalculator() {
     const totalCost = cost + otherCosts;
     const profitAmount = (cost * profitMargin) / 100;
     
+    // Selling Price = (Total Cost + Desired Profit) / (1 - (Fee Percentage / 100))
     const sellingPrice = (totalCost + profitAmount) / (1 - (platformFeePercent / 100));
     const platformFeeAmount = sellingPrice * (platformFeePercent / 100);
     const finalProfit = sellingPrice - totalCost - platformFeeAmount;
@@ -139,6 +146,11 @@ export default function PriceCalculator() {
       case 'electronics': return 'อิเล็กทรอนิกส์';
       case 'fashion': return 'แฟชั่น';
       case 'health-beauty': return 'สุขภาพและความงาม';
+      case 'non-mall': return 'ร้านค้าทั่วไป (Non-Mall)';
+      case 'mall': return 'ร้านค้าทางการ (Mall)';
+      case 'marketplace': return 'ร้านค้าทั่วไป (Marketplace)';
+      case 'lazmall': return 'ร้านค้าทางการ (LazMall)';
+      case 'all': return 'สินค้าทุกหมวดหมู่';
       case 'other': return 'อื่นๆ';
       default: return categoryKey;
     }
@@ -207,18 +219,18 @@ export default function PriceCalculator() {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>หมวดหมู่สินค้า</FormLabel>
+                      <FormLabel>หมวดหมู่สินค้า/ประเภท</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatform}>
                         <FormControl>
                           <SelectTrigger>
                             <LayoutGrid className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                            <SelectValue placeholder="เลือกหมวดหมู่" />
+                            <SelectValue placeholder="เลือกหมวดหมู่/ประเภท" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {categories.map((cat) => (
                             <SelectItem key={cat} value={cat}>
-                              {getCategoryLabel(cat)} (ค่าธรรมเนียม {PLATFORM_FEES[selectedPlatform]?.[cat]}%)
+                              {getCategoryLabel(cat)} (ค่าธรรมเนียม ~{PLATFORM_FEES[selectedPlatform]?.[cat]}%)
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -240,6 +252,7 @@ export default function PriceCalculator() {
                           <Input type="number" placeholder="0" className="pl-10" {...field} />
                         </FormControl>
                       </div>
+                      <FormDescription>เช่น ค่าแพ็คของ, ค่าเดินทาง</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
