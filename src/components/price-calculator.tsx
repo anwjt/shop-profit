@@ -414,7 +414,7 @@ export default function PriceCalculator() {
                     name="discount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>6. ส่วนลด (บาท)</FormLabel>
+                        <FormLabel>6. ส่วนลดร้านค้า (บาท)</FormLabel>
                         <div className="relative">
                           <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <FormControl>
@@ -422,7 +422,7 @@ export default function PriceCalculator() {
                           </FormControl>
                         </div>
                         <FormDescription>
-                          ส่วนลดนี้จะถูกบวกเข้าไปในราคาขายเพื่อรักษากำไร
+                          ส่วนลดที่ร้านค้าเป็นผู้รับผิดชอบทั้งหมด (เช่น คูปองส่วนลดที่ร้านสร้างเอง)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
