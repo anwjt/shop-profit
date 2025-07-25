@@ -79,7 +79,7 @@ const formSchema = z.object({
     name: z.string().optional(),
     value: z.coerce.number().min(0, 'ค่าใช้จ่ายต้องไม่ติดลบ'),
   })).optional(),
-  profitMargin: z.coerce.number().min(0, 'กำไรที่ต้องการต้องไม่ติดลบ'),
+  profitMargin: z.coerce.number().min(0, 'กำไรที่ต้องการต้องไม่ติดลบ').optional(),
   discount: z.coerce.number().min(0, 'ส่วนลดต้องไม่ติดลบ').optional(),
   affiliateCommission: z.coerce.number().min(0, 'ค่าคอมมิชชั่นต้องไม่ติดลบ').optional(),
 });
@@ -109,9 +109,9 @@ export default function PriceCalculator() {
       cost: undefined,
       category: '',
       otherCosts: [],
-      profitMargin: 0,
-      discount: 0,
-      affiliateCommission: 0,
+      profitMargin: undefined,
+      discount: undefined,
+      affiliateCommission: undefined,
     },
   });
 
@@ -138,7 +138,7 @@ export default function PriceCalculator() {
 
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const { cost, profitMargin, otherCosts = [], platform, category, discount = 0, affiliateCommission = 0 } = values;
+    const { cost, profitMargin = 0, otherCosts = [], platform, category, discount = 0, affiliateCommission = 0 } = values;
     
     if (!platform || !category || !PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
         console.error("Invalid platform or category selected");
@@ -285,7 +285,7 @@ export default function PriceCalculator() {
                       <div className="relative">
                         <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <FormControl>
-                          <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
+                          <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -316,7 +316,7 @@ export default function PriceCalculator() {
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                                 <FormControl>
-                                  <Input type="number" placeholder="0" className="pl-8 w-32" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
+                                  <Input type="number" placeholder="0" className="pl-8 w-32" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                                 </FormControl>
                               </div>
                               <FormMessage />
@@ -347,7 +347,7 @@ export default function PriceCalculator() {
                         <div className="relative">
                           <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <FormControl>
-                            <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
+                            <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                           </FormControl>
                         </div>
                         <FormDescription>
@@ -366,7 +366,7 @@ export default function PriceCalculator() {
                         <div className="relative">
                           <Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <FormControl>
-                            <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
+                            <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                           </FormControl>
                         </div>
                         <FormDescription>
@@ -456,5 +456,3 @@ export default function PriceCalculator() {
     </div>
   );
 }
-
-    
