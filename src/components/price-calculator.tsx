@@ -15,6 +15,7 @@ import {
   Package,
   PlusCircle,
   XCircle,
+  BadgePercent,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -69,14 +70,15 @@ const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: numb
 };
 
 const formSchema = z.object({
-  platform: z.string({ required_error: 'กรุณาเลือกแพลตฟอร์ม' }),
+  platform: z.string({ required_error: 'กรุณาเลือกแพลตฟอร์ม' }).min(1, 'กรุณาเลือกแพลตฟอร์ม'),
   cost: z.coerce.number().min(0.01, 'ราคาต้นทุนต้องมากกว่า 0'),
-  category: z.string({ required_error: 'กรุณาเลือกหมวดหมู่สินค้า' }),
+  category: z.string({ required_error: 'กรุณาเลือกหมวดหมู่สินค้า' }).min(1, 'กรุณาเลือกหมวดหมู่สินค้า'),
   otherCosts: z.array(z.object({
     name: z.string().optional(),
     value: z.coerce.number().min(0, 'ค่าใช้จ่ายต้องไม่ติดลบ'),
   })).optional(),
   profitMargin: z.coerce.number().min(0, 'กำไรที่ต้องการต้องไม่ติดลบ'),
+  discount: z.coerce.number().min(0, 'ส่วนลดต้องไม่ติดลบ').optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -100,10 +102,11 @@ export default function PriceCalculator() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       platform: '',
-      cost: undefined, // Let it be undefined so placeholder shows
+      cost: undefined,
       category: '',
       otherCosts: [],
       profitMargin: 0,
+      discount: 0,
     },
   });
 
@@ -115,10 +118,10 @@ export default function PriceCalculator() {
   const selectedPlatform = form.watch('platform');
 
   useEffect(() => {
+    form.setValue('category', '');
     if (selectedPlatform && PLATFORM_FEES[selectedPlatform]) {
       const availableCategories = Object.keys(PLATFORM_FEES[selectedPlatform]);
       setCategories(availableCategories);
-      form.setValue('category', ''); // Use setValue to clear category
     } else {
       setCategories([]);
     }
@@ -130,7 +133,7 @@ export default function PriceCalculator() {
 
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const { cost, profitMargin, otherCosts = [], platform, category } = values;
+    const { cost, profitMargin, otherCosts = [], platform, category, discount = 0 } = values;
     
     if (!platform || !category || !PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
         console.error("Invalid platform or category selected");
@@ -143,17 +146,23 @@ export default function PriceCalculator() {
     const orderFeePercent = platformCategoryData.orderFee || 0;
 
     const totalOtherCosts = otherCosts.reduce((sum, current) => sum + (current.value || 0), 0);
-    const totalCost = cost + totalOtherCosts;
+    // Include discount as part of the base cost to ensure profit margin is calculated correctly and covered.
+    const totalCost = cost + totalOtherCosts + discount;
     const profitAmount = (cost * profitMargin) / 100;
     
     // Formula: Selling Price = (Total Cost + Desired Profit) / (1 - Total Fee Percentage)
+    // The "Total Cost" here includes the discount, ensuring it's covered by the final price.
     const sellingPrice = (totalCost + profitAmount) / (1 - (commissionPercent / 100) - (orderFeePercent / 100));
 
-    const commissionAmount = sellingPrice * (commissionPercent / 100);
+    // For calculation and display purposes, the "price" the fee is based on is the selling price minus the seller's discount
+    const priceForFeeCalculation = sellingPrice - discount;
+    const commissionAmount = priceForFeeCalculation * (commissionPercent / 100);
+
+    // TikTok order fee is on the final selling price
     const orderFeeAmount = sellingPrice * (orderFeePercent / 100);
     const totalPlatformFee = commissionAmount + orderFeeAmount;
     
-    const finalProfit = sellingPrice - totalCost - totalPlatformFee;
+    const finalProfit = sellingPrice - cost - totalOtherCosts - discount - totalPlatformFee;
 
     const newResult: CalculationResult = {
       sellingPrice: sellingPrice,
@@ -260,62 +269,83 @@ export default function PriceCalculator() {
                     </FormItem>
                   )}
                 />
-                <div className="md:col-span-1 space-y-4">
-                  <FormLabel>4. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                      <FormField
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <FormLabel>4. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
+                    {fields.map((field, index) => (
+                      <div key={field.id} className="flex items-center gap-2">
+                        <FormField
+                            control={form.control}
+                            name={`otherCosts.${index}.name`}
+                            render={({ field }) => (
+                              <FormItem className="flex-grow">
+                                <FormControl>
+                                    <Input type="text" placeholder="เช่น ค่าแพ็คของ" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        <FormField
                           control={form.control}
-                          name={`otherCosts.${index}.name`}
+                          name={`otherCosts.${index}.value`}
                           render={({ field }) => (
-                            <FormItem className="flex-grow">
-                               <FormControl>
-                                  <Input type="text" placeholder="เช่น ค่าแพ็คของ" {...field} />
-                               </FormControl>
-                               <FormMessage />
+                            <FormItem>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" className="pl-8 w-32" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                                </FormControl>
+                              </div>
+                              <FormMessage />
                             </FormItem>
                           )}
                         />
-                      <FormField
-                        control={form.control}
-                        name={`otherCosts.${index}.value`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
-                              <FormControl>
-                                <Input type="number" placeholder="0" className="pl-8 w-32" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
-                              </FormControl>
-                            </div>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                        <XCircle className="h-5 w-5 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => append({ name: '', value: 0 })}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    เพิ่มรายการค่าใช้จ่าย
-                  </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                          <XCircle className="h-5 w-5 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => append({ name: '', value: 0 })}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      เพิ่มรายการค่าใช้จ่าย
+                    </Button>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="discount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>5. ส่วนลด (บาท)</FormLabel>
+                        <div className="relative">
+                          <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <FormControl>
+                            <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
+                          </FormControl>
+                        </div>
+                        <FormDescription>
+                          ส่วนลดนี้จะถูกบวกเข้าไปในราคาขาย
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 <FormField
                   control={form.control}
                   name="profitMargin"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>5. กำไรที่ต้องการ (เปอร์เซ็นต์จากต้นทุน)</FormLabel>
+                      <FormLabel>6. กำไรที่ต้องการ (เปอร์เซ็นต์จากต้นทุน)</FormLabel>
                       <div className="relative">
                         <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <FormControl>
-                          <Input type="number" placeholder="20" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                          <Input type="number" placeholder="0" className="pl-10" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -348,7 +378,7 @@ export default function PriceCalculator() {
               result && (
                 <>
                   <div className="text-center p-6 bg-secondary rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย</p>
+                    <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)</p>
                     <p className="text-5xl font-bold text-primary tracking-tight mt-2">
                       {result.sellingPrice.toFixed(2)}
                     </p>
@@ -371,7 +401,7 @@ export default function PriceCalculator() {
                   </div>
                   {result.otherCosts > 0 && (
                      <div className="p-4 bg-muted/50 rounded-lg md:col-span-2">
-                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ</p>
+                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p>
                        <p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p>
                     </div>
                   )}
