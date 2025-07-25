@@ -43,7 +43,7 @@ export default function DocsPage() {
               คู่มือการใช้งานและสูตรคำนวณ
             </CardTitle>
             <CardDescription>
-              ทำความเข้าใจวิธีการทำงานของเครื่องมือคำนวณราคาขาย
+              ทำความเข้าใจวิธีการทำงานของเครื่องมือคำนวณราคาขาย (ฉบับละเอียด)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -52,10 +52,10 @@ export default function DocsPage() {
               <p className="text-muted-foreground">
                 การตั้งราคาขายบนแพลตฟอร์มอีคอมเมิร์ซมีความซับซ้อนจากค่าธรรมเนียมหลายประเภท หากคำนวณผิดพลาดอาจทำให้คุณขาดทุนโดยไม่รู้ตัว เครื่องมือนี้ถูกสร้างขึ้นเพื่อแก้ปัญหานี้โดยเฉพาะ:
               </p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li><span className="font-semibold">ความแม่นยำสูง:</span> รวมค่าธรรมเนียมที่จำเป็นเกือบทั้งหมด ทำให้คุณเห็นกำไรที่แท้จริง</li>
-                <li><span className="font-semibold">ประหยัดเวลา:</span> ไม่ต้องนั่งคำนวณด้วยตนเองที่แสนจะวุ่นวายและเสี่ยงต่อการผิดพลาด</li>
-                <li><span className="font-semibold">รับประกันกำไร:</span> ช่วยให้คุณตั้งราคาขายที่ครอบคลุมทุกค่าใช้จ่ายและได้กำไรตามที่ต้องการ</li>
+              <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
+                <li><span className="font-semibold text-foreground">ความแม่นยำสูง:</span> รวมค่าธรรมเนียมที่จำเป็นเกือบทั้งหมด ทำให้คุณเห็นกำไรที่แท้จริง</li>
+                <li><span className="font-semibold text-foreground">ประหยัดเวลา:</span> ไม่ต้องนั่งคำนวณด้วยตนเองที่แสนจะวุ่นวายและเสี่ยงต่อการผิดพลาด</li>
+                <li><span className="font-semibold text-foreground">รับประกันกำไร:</span> ช่วยให้คุณตั้งราคาขายที่ครอบคลุมทุกค่าใช้จ่ายและได้กำไรตามที่ต้องการ</li>
               </ul>
             </section>
 
@@ -65,16 +65,16 @@ export default function DocsPage() {
                 หัวใจของการคำนวณคือการหาราคาขาย (Selling Price) ที่เมื่อถูกหักค่าธรรมเนียมทั้งหมดแล้ว จะยังคงเหลือเพียงพอสำหรับต้นทุนและกำไรที่คุณต้องการ สูตรหลักที่ใช้คือ:
               </p>
               <div className="mt-4 p-4 bg-muted/50 rounded-lg text-center font-mono text-sm sm:text-base">
-              (ต้นทุนรวม + กำไรที่ต้องการ + ส่วนลด) / (1 - อัตราค่าธรรมเนียมรวม)
+              ราคาขาย = (ต้นทุนรวม + กำไรที่ต้องการ + ส่วนลด) / (1 - อัตราค่าธรรมเนียมรวม)
               </div>
                <p className="text-muted-foreground mt-2 text-xs">
-                *ต้นทุนรวม = ราคาต้นทุน + ค่าใช้จ่ายอื่นๆ <br/>
-                *อัตราค่าธรรมเนียมรวม = %ค่าคอมมิชชั่น + %ค่าธรรมเนียมอื่นๆ + %ค่าคอม Affiliate
+                *ต้นทุนรวม = ราคาต้นทุนสินค้า + ค่าใช้จ่ายอื่นๆ <br/>
+                *อัตราค่าธรรมเนียมรวม = (%ค่าคอมมิชชั่น + %ค่าธรรมเนียมอื่นๆ) + %ค่าคอม Affiliate
               </p>
               <div className="mt-4 p-4 bg-yellow-100/50 rounded-lg border border-yellow-300 text-sm">
-                <h4 className="font-bold text-yellow-800">ทำไมต้องบวกส่วนลดเข้าไปในตัวตั้ง?</h4>
+                <h4 className="font-bold text-yellow-800">ทำไมต้องบวก "ส่วนลด" เข้าไปในตัวตั้ง?</h4>
                 <p className="text-yellow-700 mt-1">
-                  เพราะค่าธรรมเนียมส่วนใหญ่จะถูกคิดจาก "ราคาขายหลังหักส่วนลด" การบวกส่วนลดเข้าไปในสูตรก่อนหาร จะทำให้ราคาขายที่ได้ "สูงขึ้น" เพื่อชดเชยค่าธรรมเนียมที่ลดลงจากการให้ส่วนลดนั้นเอง จึงมั่นใจได้ว่าแม้จะลดราคาให้ลูกค้าแล้ว กำไรของคุณจะยังคงเท่าเดิมตามที่ตั้งใจไว้
+                  เพราะค่าธรรมเนียมส่วนใหญ่จะถูกคิดจาก "ราคาขายหลังหักส่วนลด" การบวกส่วนลดเข้าไปในสูตรก่อนหาร จะทำให้ราคาขายที่คำนวณได้ "สูงขึ้น" เพื่อชดเชยค่าธรรมเนียมที่จะหายไปจากการให้ส่วนลดนั้นเอง จึงมั่นใจได้ว่าแม้จะลดราคาให้ลูกค้าแล้ว กำไรของคุณจะยังคงเท่าเดิมตามที่ตั้งใจไว้
                 </p>
               </div>
             </section>
@@ -85,68 +85,57 @@ export default function DocsPage() {
                 <AccordionItem value="shopee">
                   <AccordionTrigger>Shopee</AccordionTrigger>
                   <AccordionContent>
-                    <p className="font-semibold">ค่าธรรมเนียมของ Shopee ประกอบด้วย:</p>
+                    <p className="font-semibold mb-2">ค่าธรรมเนียมของ Shopee ประกอบด้วย (ราคารวม VAT 7% แล้ว):</p>
                     <ul className="list-decimal list-inside space-y-2 mt-2 text-muted-foreground">
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมการขาย (Commission Fee):</span> หักจากราคาขายที่ลดราคาแล้ว (ถ้ามี) อัตราแตกต่างกันไปในแต่ละหมวดหมู่สินค้า
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมการขาย (Commission Fee):</span> หักจากราคาขายสินค้าหลังหักส่วนลดร้านค้า อัตราแตกต่างกันไปในแต่ละหมวดหมู่
                         </li>
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมธุรกรรมการชำระเงิน (Transaction Fee):</span> หักจากยอดรวมที่ผู้ซื้อชำระ (รวมค่าขนส่ง) ผ่านทุกช่องทางการชำระเงิน <span className="font-bold">เครื่องมือของเรารวมค่าธรรมเนียมส่วนนี้เข้าไปในค่าคอมมิชชั่นหลักแล้ว (ประมาณ 3.21%)</span> เพื่อให้การคำนวณครอบคลุมมากที่สุด
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมธุรกรรมการชำระเงิน (Transaction Fee):</span> หักจากยอดรวมที่ผู้ซื้อชำระผ่านทุกช่องทาง <span className="font-bold">เครื่องมือของเรารวมค่าธรรมเนียมนี้เข้าไปในค่าคอมมิชชั่นหลักแล้ว (ประมาณ 3.21%)</span> เพื่อให้การคำนวณครอบคลุมมากที่สุด
                         </li>
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมผ่อนชำระ (Installment Fee):</span> สำหรับร้านค้าที่เข้าร่วมโปรแกรมผ่อนชำระผ่านบัตรเครดิต หรือ SPayLater
-                        </li>
-                        <li>
-                            <span className="font-semibold text-foreground">ราคานี้รวมภาษีมูลค่าเพิ่ม (VAT 7%) แล้ว</span>
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมโปรแกรมส่งเสริมการขาย (Service Program Fee):</span> เช่น โปรแกรมส่งฟรี (Free Shipping), โปรแกรมเงินคืน (Cashback) เป็นต้น <span className="font-bold">เครื่องมือนี้ยังไม่รวมค่าธรรมเนียมส่วนนี้</span>
                         </li>
                     </ul>
                     <Tabs defaultValue="main" className="w-full mt-4">
                       <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="main">ค่าธรรมเนียมหลัก</TabsTrigger>
                         <TabsTrigger value="installment">
-                          <CreditCard className="mr-2" />ค่าผ่อนชำระ
+                          <CreditCard className="mr-2 h-4 w-4" />ค่าผ่อนชำระ
                         </TabsTrigger>
                       </TabsList>
                       <TabsContent value="main">
-                        <Table className="mt-4">
+                        <p className="text-sm text-muted-foreground mt-2 mb-2">อัตราค่าธรรมเนียมโดยประมาณที่ใช้ในเครื่องคำนวณ (รวมค่าคอมมิชชั่นและค่าธุรกรรมแล้ว)</p>
+                        <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead>หมวดหมู่สินค้า</TableHead>
-                              <TableHead className="text-right">ค่าคอมฯ</TableHead>
-                              <TableHead className="text-right">ค่าธุรกรรม</TableHead>
-                              <TableHead className="text-right">รวม (ที่ใช้ในแอป)</TableHead>
+                              <TableHead className="text-right">ค่าธรรมเนียมรวม (โดยประมาณ)</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             <TableRow>
                               <TableCell>สินค้าแฟชั่น</TableCell>
-                              <TableCell className="text-right">9.63%</TableCell>
-                              <TableCell className="text-right">~3.21%</TableCell>
                               <TableCell className="text-right font-bold">~12.84%</TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell>สินค้าอิเล็กทรอนิกส์</TableCell>
-                              <TableCell className="text-right">8.56%</TableCell>
-                              <TableCell className="text-right">~3.21%</TableCell>
                               <TableCell className="text-right font-bold">~11.77%</TableCell>
                             </TableRow>
-                            <TableRow>
+                             <TableRow>
                               <TableCell>สินค้าไลฟ์สไตล์</TableCell>
-                              <TableCell className="text-right">8.025%</TableCell>
-                              <TableCell className="text-right">~3.21%</TableCell>
                               <TableCell className="text-right font-bold">~11.24%</TableCell>
                             </TableRow>
-                            <TableRow>
+                             <TableRow>
                               <TableCell>สินค้าทั่วไป (นอกกลุ่มอิเล็กฯ)</TableCell>
-                              <TableCell className="text-right">8.56%</TableCell>
-                              <TableCell className="text-right">~3.21%</TableCell>
                               <TableCell className="text-right font-bold">~11.77%</TableCell>
                             </TableRow>
                           </TableBody>
                         </Table>
                       </TabsContent>
                       <TabsContent value="installment">
-                         <Table className="mt-4">
+                         <p className="text-sm text-muted-foreground mt-2 mb-2">กรณีที่ลูกค้าชำระเงินผ่านช่องทางพิเศษ จะมีค่าธรรมเนียม<span className="font-bold">บวกเพิ่ม</span>จากค่าธรรมเนียมหลัก</p>
+                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead>ช่องทางการชำระเงิน</TableHead>
@@ -164,7 +153,7 @@ export default function DocsPage() {
                             </TableRow>
                           </TableBody>
                         </Table>
-                         <p className="mt-2 text-xs text-muted-foreground">*ค่าธรรมเนียมนี้จะถูกบวกเพิ่มจากค่าธรรมเนียมหลักเมื่อลูกค้าเลือกชำระเงินด้วยวิธีดังกล่าว ซึ่งในหน้าเครื่องคำนวณจะมีการแสดงราคาแนะนำสำหรับกรณีนี้แยกไว้ให้</p>
+                         <p className="mt-2 text-xs text-muted-foreground">*ในหน้าเครื่องคำนวณจะมีการแสดงราคาแนะนำสำหรับกรณีนี้แยกไว้ให้ต่างหาก</p>
                       </TabsContent>
                     </Tabs>
                   </AccordionContent>
@@ -172,19 +161,17 @@ export default function DocsPage() {
                 <AccordionItem value="lazada">
                   <AccordionTrigger>Lazada</AccordionTrigger>
                   <AccordionContent>
-                    <p className="font-semibold">ค่าธรรมเนียมของ Lazada ประกอบด้วย:</p>
+                    <p className="font-semibold mb-2">ค่าธรรมเนียมของ Lazada ประกอบด้วย (ราคารวม VAT 7% แล้ว):</p>
                      <ul className="list-decimal list-inside space-y-2 mt-2 text-muted-foreground">
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมมาร์เก็ตเพลส (Marketplace Fee):</span> หักจากราคาขายสินค้า อัตราสูงสุดแตกต่างกันไปในแต่ละหมวดหมู่ (เครื่องมือใช้เรทสูงสุดในการคำนวณ)
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมมาร์เก็ตเพลส (Marketplace Fee):</span> หักจากราคาขายสินค้า อัตราสูงสุดแตกต่างกันไปในแต่ละหมวดหมู่
                         </li>
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมการชำระเงิน (Payment Fee):</span> หักจากราคาขายสินค้าที่ 3% (รวม VAT เป็น 3.21%)
-                        </li>
-                         <li>
-                            <span className="font-semibold text-foreground">ราคานี้รวมภาษีมูลค่าเพิ่ม (VAT 7%) แล้ว</span> (เช่น 8% จะกลายเป็น 8.56%)
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมการชำระเงิน (Payment Fee):</span> หัก 3.21% จากราคาขายสินค้า
                         </li>
                     </ul>
-                     <Table className="mt-4">
+                     <p className="text-sm text-muted-foreground mt-4 mb-2">อัตราค่าธรรมเนียมที่ใช้ในเครื่องคำนวณ (ใช้เรทสูงสุดของแต่ละหมวดหมู่ + ค่าชำระเงิน)</p>
+                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>หมวดหมู่สินค้า</TableHead>
@@ -231,19 +218,17 @@ export default function DocsPage() {
                 <AccordionItem value="tiktok">
                   <AccordionTrigger>TikTok Shop</AccordionTrigger>
                   <AccordionContent>
-                     <p className="font-semibold">ค่าธรรมเนียมของ TikTok Shop ประกอบด้วย:</p>
+                     <p className="font-semibold mb-2">ค่าธรรมเนียมของ TikTok Shop ประกอบด้วย (ราคารวม VAT 7% แล้ว):</p>
                       <ul className="list-decimal list-inside space-y-2 mt-2 text-muted-foreground">
                         <li>
-                            <span className="font-semibold text-foreground">ค่าคอมมิชชั่น (Commission Fee):</span> หักจากราคาขายของสินค้าหลังจากหักส่วนลดแล้ว อัตราแตกต่างกันในแต่ละหมวดหมู่
+                            <span className="font-semibold text-foreground">ค่าคอมมิชชั่น (Commission Fee):</span> หักจากราคาขายของสินค้าหลังหักส่วนลดแล้ว อัตราแตกต่างกันในแต่ละหมวดหมู่
                         </li>
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมคำสั่งซื้อ (Order Fee):</span> หรือที่เรียกว่าค่าธรรมเนียมคงที่ (Fixed Fee) หัก 3% จากราคาขายของสินค้าหลังจากหักส่วนลดแล้ว (รวม VAT เป็น 3.21%)
-                        </li>
-                         <li>
-                            <span className="font-semibold text-foreground">ราคานี้รวมภาษีมูลค่าเพิ่ม (VAT 7%) แล้ว</span>
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมคำสั่งซื้อ (Order Fee):</span> หัก 3.21% จากราคาขายของสินค้าหลังหักส่วนลดแล้ว
                         </li>
                     </ul>
-                     <Table className="mt-4">
+                    <p className="text-sm text-muted-foreground mt-4 mb-2">อัตราค่าธรรมเนียมที่ใช้ในเครื่องคำนวณ (รวมค่าคอมมิชชั่นและค่าธรรมเนียมคำสั่งซื้อแล้ว)</p>
+                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>หมวดหมู่สินค้า</TableHead>
@@ -294,7 +279,7 @@ export default function DocsPage() {
                       <li>ต้องการกำไร: <span className="font-bold">20%</span> (ของต้นทุนสินค้า = 20 บาท)</li>
                       <li>สร้างคูปองส่วนลดให้ลูกค้า: <span className="font-bold">10</span> บาท</li>
                       <li>ตั้งค่าคอม Affiliate: <span className="font-bold">3%</span></li>
-                      <li>หมวดหมู่สินค้า: อิเล็กทรอนิกส์ (ค่าธรรมเนียมรวม VAT และค่าธุรกรรม ≈ <span className="font-bold">11.77%</span>)</li>
+                      <li>หมวดหมู่สินค้า: อิเล็กทรอนิกส์ (ค่าธรรมเนียมรวม ≈ <span className="font-bold">11.77%</span>)</li>
                     </ul>
                     <p className="font-semibold mb-2">ขั้นตอนการคำนวณ:</p>
                     <ol className="list-decimal list-inside space-y-2">
@@ -311,9 +296,9 @@ export default function DocsPage() {
                       <li><span className="font-semibold">พิสูจน์กำไร:</span>
                         <ul className="list-disc list-inside mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
                           <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600">158.39</span> บาท</li>
-                          <li>หักส่วนลดร้านค้า: -10.00 บาท (เหลือ <span className="font-bold">148.39</span>)</li>
+                          <li>หักส่วนลดร้านค้า: -10.00 บาท (เหลือยอดสำหรับคิดค่าธรรมเนียม <span className="font-bold">148.39</span>)</li>
                           <li>หักค่าธรรมเนียม Shopee (11.77% ของ 148.39): <span className="text-red-600">-17.46</span> บาท</li>
-                          <li>หักค่าคอม Affiliate (3% ของ 158.39): <span className="text-red-600">-4.75</span> บาท</li>
+                          <li>หักค่าคอม Affiliate (3% ของราคาขาย 158.39): <span className="text-red-600">-4.75</span> บาท</li>
                           <li>หักต้นทุนรวม: <span className="text-red-600">-105.00</span> บาท</li>
                           <li><span className="font-bold">กำไรสุทธิ: 158.39 - 10 - 17.46 - 4.75 - 105 = <span className="text-green-600 font-bold text-base">21.18</span> บาท*</span></li>
                         </ul>
@@ -332,7 +317,7 @@ export default function DocsPage() {
                       <li>ต้องการกำไร: <span className="font-bold">80</span> บาท (กำหนดเป็นตัวเลข)</li>
                       <li>สร้างคูปองส่วนลดให้ลูกค้า: <span className="font-bold">20</span> บาท</li>
                       <li>ตั้งค่าคอม Affiliate: <span className="font-bold">5%</span></li>
-                      <li>หมวดหมู่สินค้า: แฟชั่น (ค่ามาร์เก็ตเพลส 9.63% + ค่าชำระเงิน 3.21% = <span className="font-bold">12.84%</span>)</li>
+                      <li>หมวดหมู่สินค้า: แฟชั่น (ค่าธรรมเนียมรวม = <span className="font-bold">12.84%</span>)</li>
                     </ul>
                     <p className="font-semibold mb-2">ขั้นตอนการคำนวณ:</p>
                     <ol className="list-decimal list-inside space-y-2">
@@ -348,9 +333,9 @@ export default function DocsPage() {
                       <li><span className="font-semibold">พิสูจน์กำไร:</span>
                         <ul className="list-disc list-inside mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
                           <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600">438.17</span> บาท</li>
-                           <li>หักส่วนลดร้านค้า: -20.00 บาท (เหลือ <span className="font-bold">418.17</span>)</li>
+                           <li>หักส่วนลดร้านค้า: -20.00 บาท (เหลือยอดสำหรับคิดค่าธรรมเนียม <span className="font-bold">418.17</span>)</li>
                           <li>หักค่าธรรมเนียม Lazada (12.84% ของ 418.17): <span className="text-red-600">-53.69</span> บาท</li>
-                          <li>หักค่าคอม Affiliate (5% ของ 438.17): <span className="text-red-600">-21.91</span> บาท</li>
+                          <li>หักค่าคอม Affiliate (5% ของราคาขาย 438.17): <span className="text-red-600">-21.91</span> บาท</li>
                           <li>หักต้นทุนรวม: <span className="text-red-600">-260.00</span> บาท</li>
                            <li><span className="font-bold">กำไรสุทธิ: 438.17 - 20 - 53.69 - 21.91 - 260 = <span className="text-green-600 font-bold text-base">82.57</span> บาท*</span></li>
                         </ul>
@@ -369,7 +354,7 @@ export default function DocsPage() {
                       <li>ต้องการกำไร: <span className="font-bold">25%</span> (ของต้นทุนสินค้า = 20 บาท)</li>
                       <li>ไม่ได้สร้างคูปองส่วนลด</li>
                       <li>ไม่ได้เข้าร่วม Affiliate</li>
-                      <li>หมวดหมู่สินค้า: ไลฟ์สไตล์ (ค่าคอมฯ 5.35% + ค่าคำสั่งซื้อ 3.21% = <span className="font-bold">8.56%</span>)</li>
+                      <li>หมวดหมู่สินค้า: ไลฟ์สไตล์ (ค่าธรรมเนียมรวม = <span className="font-bold">8.56%</span>)</li>
                     </ul>
                     <p className="font-semibold mb-2">ขั้นตอนการคำนวณ:</p>
                     <ol className="list-decimal list-inside space-y-2">
@@ -378,6 +363,7 @@ export default function DocsPage() {
                        <li><span className="font-semibold">อัตราค่าธรรมเนียมรวม:</span> <span className="font-bold">8.56%</span> หรือ 0.0856</li>
                       <li><span className="font-semibold">แทนค่าในสูตร:</span>
                         <div className="font-mono p-3 bg-muted/50 my-2 rounded-md text-xs sm:text-sm">
+                          ราคาขาย = (ต้นทุนรวม + กำไร + ส่วนลด) / (1 - อัตราค่าธรรมเนียมรวม)<br/>
                           ราคาขาย = (80 + 20 + 0) / (1 - 0.0856)<br/>
                           ราคาขาย = 100 / 0.9144 ≈ <span className="font-bold">109.36</span> บาท
                         </div>
