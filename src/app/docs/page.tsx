@@ -27,7 +27,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { ArrowLeft, BookMarked, Calculator, Case, CreditCard, Percent, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BookMarked, Calculator, Briefcase, CreditCard, Percent, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function DocsPage() {
@@ -279,7 +279,7 @@ export default function DocsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-bold mb-2 flex items-center gap-2"><Case className="text-primary"/>กรณีศึกษา: ตัวอย่างการคำนวณจริง</h2>
+              <h2 className="text-xl font-bold mb-2 flex items-center gap-2"><Briefcase className="text-primary"/>กรณีศึกษา: ตัวอย่างการคำนวณจริง</h2>
               <p className="text-muted-foreground mb-4">
                 ดูตัวอย่างเพื่อทำความเข้าใจว่าเครื่องมือคำนวณราคาขายจากข้อมูลต่างๆ ที่คุณป้อนเข้ามาได้อย่างไร
               </p>
