@@ -291,7 +291,7 @@ export default function PriceCalculator() {
                             const platformCategory = PLATFORM_FEES[selectedPlatform]?.[cat];
                             if (!platformCategory) return null;
                             let feeLabel = `~${platformCategory.fee.toFixed(2)}%`;
-                            if (platform === 'shopee') {
+                            if (selectedPlatform === 'shopee') {
                                 feeLabel = `${feeLabel} (รวม VAT และค่าธุรกรรม)`;
                             } else if (platformCategory.orderFee) {
                                 feeLabel = `~${platformCategory.fee.toFixed(2)}% + ${platformCategory.orderFee.toFixed(2)}%`
