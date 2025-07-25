@@ -21,6 +21,8 @@ import {
   CreditCard,
   Sparkles,
   Lightbulb,
+  FileText,
+  Tag,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -42,6 +44,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -82,6 +85,8 @@ const SHOPEE_EXTRA_FEES = {
 };
 
 const formSchema = z.object({
+  productName: z.string().optional(),
+  productDescription: z.string().optional(),
   platform: z.string({ required_error: 'กรุณาเลือกแพลตฟอร์ม' }).min(1, 'กรุณาเลือกแพลตฟอร์ม'),
   cost: z.coerce.number().min(0.01, 'ราคาต้นทุนต้องมากกว่า 0'),
   category: z.string({ required_error: 'กรุณาเลือกหมวดหมู่สินค้า' }).min(1, 'กรุณาเลือกหมวดหมู่สินค้า'),
@@ -127,6 +132,8 @@ export default function PriceCalculator() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      productName: '',
+      productDescription: '',
       platform: '',
       cost: undefined,
       category: '',
@@ -258,10 +265,20 @@ export default function PriceCalculator() {
 
   const handleSuggestPrice = async () => {
     if (!result) return;
+    const { productName, productDescription } = form.getValues();
+    if (!productName || !productDescription) {
+        // You can use a toast or an alert to notify the user.
+        alert("กรุณากรอกชื่อและรายละเอียดสินค้าก่อนรับข้อเสนอแนะ");
+        return;
+    }
+
     setIsSuggesting(true);
     setSuggestion(null);
     try {
       const suggestionResult = await suggestPrice({
+        productName,
+        productDescription,
+        platform: result.platform,
         currentPrice: result.sellingPrice,
         cost: result.totalCost,
         profit: result.profit,
@@ -294,6 +311,43 @@ export default function PriceCalculator() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+               <div className="space-y-2">
+                 <FormLabel>ข้อมูลสินค้า (สำหรับ AI ช่วยแนะนำราคา)</FormLabel>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="productName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="relative">
+                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <FormControl>
+                                <Input type="text" placeholder="ชื่อสินค้า" className="pl-10" {...field} />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="productDescription"
+                      render={({ field }) => (
+                        <FormItem>
+                           <div className="relative">
+                            <FileText className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                             <FormControl>
+                                <Textarea placeholder="รายละเอียดสินค้า" className="pl-10" {...field} />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+              </div>
+
+
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}

@@ -12,9 +12,12 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const SuggestPriceInputSchema = z.object({
+  productName: z.string().describe('The name of the product.'),
+  productDescription: z.string().describe('The description of the product.'),
   currentPrice: z.number().describe('The current calculated selling price of the product.'),
   cost: z.number().describe('The cost of the product.'),
   profit: z.number().describe('The current calculated profit.'),
+  platform: z.string().describe('The e-commerce platform (e.g., Shopee, Lazada).'),
 });
 export type SuggestPriceInput = z.infer<typeof SuggestPriceInputSchema>;
 
@@ -42,20 +45,30 @@ const suggestPricePrompt = ai.definePrompt({
   model: 'googleai/gemini-1.5-flash',
   input: { schema: SuggestPriceInputSchema },
   output: { schema: SuggestPriceOutputSchema },
-  prompt: `You are an expert e-commerce pricing strategist.
-Your task is to suggest a "psychological" promotional price based on the user's calculated selling price.
+  prompt: `You are an expert Thai e-commerce pricing strategist.
+Your task is to analyze a product and suggest a "psychological" and "competitive" promotional price based on the user's data. You must also analyze competitor pricing for similar items on the specified platform.
 
-Current calculated price: {{{currentPrice}}}
-Product cost: {{{cost}}}
-Current calculated profit: {{{profit}}}
+**Product Information:**
+- Product Name: {{{productName}}}
+- Product Description: {{{productDescription}}}
+- Platform: {{{platform}}}
 
-Analyze the current price. Decide if a promotional price would be beneficial.
-- If the current price is already a good psychological price (e.g., 199.00, 250.00), you can decide not to suggest a new one.
-- If you suggest a price, it should be slightly lower than the current price and rounded to a common psychological tier (e.g., ending in .99, .95, or a round number like 99 or 100).
-- The suggested price must NOT be lower than the product cost.
-- Provide a brief reasoning for your suggestion. For example, "Rounding down to a '.99' price can make the offer seem more attractive to buyers." or "This price point is common for products in this range."
+**Financial Data:**
+- Current calculated selling price: {{{currentPrice}}}
+- Product cost: {{{cost}}}
+- Current calculated profit: {{{profit}}}
 
-Based on your analysis, decide whether to make a suggestion and fill out the response.
+**Your Analysis Steps:**
+1.  **Understand the Product:** Analyze the name and description to understand the product's value and target audience.
+2.  **Simulate Competitor Analysis:** Based on the product information, estimate the typical price range for similar products on the given platform ({{{platform}}}).
+3.  **Develop Pricing Strategy:**
+    - Decide if a promotional price would be beneficial. If the current price is already very competitive and well-priced, you can choose not to suggest a new one.
+    - If you suggest a price, it must be competitive with other sellers on the platform.
+    - The price should be psychologically appealing (e.g., ending in .99, .95, or a round number like 99 or 100).
+    - **Crucially, the suggested price must NOT be lower than the product cost ({{{cost}}}).**
+4.  **Formulate Response:**
+    - Provide a brief, insightful reasoning for your suggestion. For example, "For a product like this on {{{platform}}}, a price around 199.00 THB is highly competitive. Rounding down to 199.00 makes the offer attractive and stands out." or "The current price is already excellent, no change is needed."
+    - Based on your analysis, decide whether to make a suggestion and fill out the response.
 `,
 });
 
