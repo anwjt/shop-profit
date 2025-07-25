@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
   Calculator,
-  DollarSign,
   Percent,
   PlusCircle,
   TrendingUp,
@@ -206,7 +205,7 @@ export default function PriceCalculator() {
                     <FormItem>
                       <FormLabel>2. ราคาต้นทุน</FormLabel>
                       <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">฿</span>
                         <FormControl>
                           <Input type="number" placeholder="100" className="pl-10" {...field} />
                         </FormControl>
@@ -254,8 +253,8 @@ export default function PriceCalculator() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>4. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
-                      <div className="relative">
-                        <PlusCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                       <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">฿</span>
                         <FormControl>
                           <Input type="number" placeholder="0" className="pl-10" {...field} />
                         </FormControl>
