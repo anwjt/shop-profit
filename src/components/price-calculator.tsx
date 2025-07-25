@@ -349,7 +349,7 @@ export default function PriceCalculator() {
                   <FormField control={form.control} name="affiliateCommission" render={({ field }) => (<FormItem><FormLabel>7. ค่าคอม Affiliate (%)</FormLabel><div className="relative"><Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย</FormDescription><FormMessage /></FormItem>)} />
               </div>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <Button type="button" variant="outline" className="w-full" onClick={handleClear}>
+                <Button type="button" variant="outline" className="w-full" onClick={handleClear} disabled={!result && !isLoading}>
                     <RotateCcw className="mr-2 h-4 w-4" />
                     ล้างข้อมูล
                 </Button>
