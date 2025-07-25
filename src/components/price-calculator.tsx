@@ -20,37 +20,16 @@ import {
   Handshake,
   CreditCard,
   Sparkles,
-  Lightbulb,
-  FileText,
-  Tag,
-  KeyRound,
-  LogOut,
-  User as UserIcon,
-  BarChart,
 } from 'lucide-react';
-import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-
-import { auth } from '@/lib/firebase';
-import { saveApiKey, getApiKey } from '@/app/actions';
-
 
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
@@ -61,7 +40,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -71,10 +49,6 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { suggestPrice, SuggestPriceOutput } from '@/ai/flows/suggest-price-flow';
 
 
 const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number, paymentFee?: number } } } = {
@@ -118,17 +92,6 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const suggestionFormSchema = z.object({
-  productName: z.string().min(1, 'กรุณากรอกชื่อสินค้า'),
-  productDescription: z.string().min(1, 'กรุณากรอกรายละเอียดสินค้า'),
-});
-type SuggestionFormValues = z.infer<typeof suggestionFormSchema>;
-
-const apiKeyFormSchema = z.object({
-  apiKey: z.string().min(10, 'API Key ไม่ถูกต้อง'),
-});
-type ApiKeyFormValues = z.infer<typeof apiKeyFormSchema>;
-
 type CalculationResult = {
   sellingPrice: number;
   platformFeeAmount: number;
@@ -149,58 +112,11 @@ type CalculationResult = {
   totalCost: number;
 };
 
-const thinkingMessages = [
-  "กำลังวิเคราะห์ข้อมูลสินค้าของคุณ...",
-  "พิจารณากลยุทธ์ราคาบนแพลตฟอร์ม...",
-  "ประเมินราคาที่เหมาะสมทางจิตวิทยา...",
-  "กำลังสร้างข้อเสนอแนะราคาที่ดีที่สุด...",
-];
-
 export default function PriceCalculator() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [suggestion, setSuggestion] = useState<SuggestPriceOutput | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
-  const [isSuggestDialogOpen, setIsSuggestDialogOpen] = useState(false);
   
-  const [user, setUser] = useState<User | null>(null);
-  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null); // null means unknown
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
-  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
-  const [thinkingMessage, setThinkingMessage] = useState(thinkingMessages[0]);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setIsAuthLoading(true);
-      if (currentUser) {
-        setUser(currentUser);
-        const key = await getApiKey(currentUser.uid);
-        setHasApiKey(!!key);
-      } else {
-        setUser(null);
-        setHasApiKey(false);
-      }
-      setIsAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isSuggesting) {
-      let index = 0;
-      interval = setInterval(() => {
-        index = (index + 1) % thinkingMessages.length;
-        setThinkingMessage(thinkingMessages[index]);
-      }, 2500);
-    }
-    return () => clearInterval(interval);
-  }, [isSuggesting]);
-
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -208,16 +124,6 @@ export default function PriceCalculator() {
       otherCosts: [], profitMargin: undefined, discount: undefined,
       affiliateCommission: undefined,
     },
-  });
-
-  const suggestionForm = useForm<SuggestionFormValues>({
-    resolver: zodResolver(suggestionFormSchema),
-    defaultValues: { productName: '', productDescription: '' },
-  });
-
-  const apiKeyForm = useForm<ApiKeyFormValues>({
-    resolver: zodResolver(apiKeyFormSchema),
-    defaultValues: { apiKey: '' },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -236,59 +142,6 @@ export default function PriceCalculator() {
     }
   }, [selectedPlatform, form]);
 
-  const handleGoogleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      setIsAuthDialogOpen(false);
-      const result = await signInWithPopup(auth, provider);
-      const key = await getApiKey(result.user.uid);
-      if (!key) {
-        setIsApiDialogOpen(true);
-      } else {
-        setIsSuggestDialogOpen(true);
-      }
-    } catch (error: any) {
-      console.error("Error signing in with Google:", error);
-      toast({
-        variant: 'destructive',
-        title: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
-        description: `ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ${error.message} \n ${error.stack}`,
-      });
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-    } catch (error: any) {
-      console.error("Error signing out:", error);
-      toast({
-        variant: 'destructive',
-        title: 'เกิดข้อผิดพลาดในการออกจากระบบ',
-        description: `${error.message} \n ${error.stack}`,
-      });
-    }
-  };
-
-  const handleSaveApiKey = async (values: ApiKeyFormValues) => {
-    if (!user) return;
-    const result = await saveApiKey(user.uid, values.apiKey);
-    if (result.success) {
-      setHasApiKey(true);
-      setIsApiDialogOpen(false);
-      toast({
-        title: 'บันทึกสำเร็จ',
-        description: 'API Key ของคุณถูกบันทึกเรียบร้อยแล้ว',
-      });
-      setIsSuggestDialogOpen(true);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'เกิดข้อผิดพลาด',
-        description: `${result.error} ${result.details ? `(${result.details})` : ''}`,
-      });
-    }
-  };
 
   const calculateSellingPrice = (baseCost: number, profitAmount: number, discount: number, feeRate: number): number => {
     const numerator = baseCost + profitAmount - (discount * feeRate) + discount;
@@ -300,7 +153,6 @@ export default function PriceCalculator() {
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
     setResult(null);
-    setSuggestion(null);
     await new Promise((resolve) => setTimeout(resolve, 300));
     const { cost, profitMargin = 0, otherCosts = [], platform, category, discount = 0, affiliateCommission = 0 } = values;
     if (!platform || !category || !PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
@@ -346,95 +198,8 @@ export default function PriceCalculator() {
     setIsLoading(false);
   }
 
-  const handleSuggestPriceFlow = () => {
-    if (isSuggesting) return;
-
-    if (!user) {
-      setIsAuthDialogOpen(true);
-      return;
-    }
-
-    if (!hasApiKey) {
-      setIsApiDialogOpen(true);
-      return;
-    }
-    
-    setIsSuggestDialogOpen(true);
-  };
-
-  const handleSuggestPriceSubmit = async (suggestionValues: SuggestionFormValues) => {
-    if (!result || !user) return;
-    setIsSuggesting(true);
-    setSuggestion(null);
-    setIsSuggestDialogOpen(false);
-    try {
-      const apiKey = await getApiKey(user.uid);
-      if (!apiKey) {
-        toast({ variant: 'destructive', title: 'ไม่พบ API Key', description: 'กรุณาเพิ่ม API Key ก่อนใช้งาน' });
-        setIsApiDialogOpen(true);
-        setIsSuggesting(false);
-        return;
-      }
-      const suggestionResult = await suggestPrice({
-        apiKey,
-        productName: suggestionValues.productName,
-        productDescription: suggestionValues.productDescription,
-        platform: result.platform,
-        currentPrice: result.sellingPrice,
-        cost: result.totalCost,
-        profit: result.profit,
-      });
-      setSuggestion(suggestionResult);
-    } catch (error: any) {
-      console.error("Error suggesting price:", error);
-      toast({ variant: 'destructive', title: 'AI Error', description: `เกิดข้อผิดพลาดขณะเรียกใช้ AI: ${error.message} \n ${error.stack}` });
-    } finally {
-      setIsSuggesting(false);
-    }
-  };
-  
-  const AuthSection = () => {
-    if (isAuthLoading) {
-      return <Skeleton className="h-10 w-40" />;
-    }
-    if (user) {
-      return (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'}/>
-                <AvatarFallback><UserIcon /></AvatarFallback>
-              </Avatar>
-              <span className="hidden sm:inline">{user.displayName}</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-48 p-2">
-            <Button variant="ghost" className="w-full justify-start" onClick={() => setIsApiDialogOpen(true)}>
-              <KeyRound className="mr-2 h-4 w-4" />
-              จัดการ API Key
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              ออกจากระบบ
-            </Button>
-          </PopoverContent>
-        </Popover>
-      );
-    }
-    return (
-      <Button onClick={() => setIsAuthDialogOpen(true)}>
-        <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-76.4 76.4A119.4 119.4 0 0 0 248 152c-66.6 0-120.9 54.4-120.9 120.9s54.3 120.9 120.9 120.9c47.7 0 88.1-27.1 108.3-65.7H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path></svg>
-        เข้าสู่ระบบด้วย Google
-      </Button>
-    )
-  }
-
   return (
     <div className="w-full max-w-4xl space-y-4">
-      <div className="flex justify-end p-2">
-        <AuthSection />
-      </div>
       <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
@@ -571,38 +336,6 @@ export default function PriceCalculator() {
                   </div>
                   {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{result.otherCosts > 0 && (<div className="p-4 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p></div>)}{result.affiliateCommissionAmount > 0 && (<div className={`p-4 bg-muted/50 rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.affiliateCommissionAmount.toFixed(2)}</p></div>)}</div>)}
                   <Alert variant="default" className="mt-4 bg-muted/50 border-transparent"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคานี้เป็นการคำนวณเบื้องต้น อาจมีการเปลี่ยนแปลงจากค่าธรรมเนียมส่งเสริมการขาย, ค่าขนส่ง, หรือส่วนลดอื่นๆ ของแพลตฟอร์ม</AlertDescription></Alert>
-                  
-                  {!suggestion && !isSuggesting &&(
-                    <>
-                      <Button
-                        variant="outline"
-                        className="w-full mt-4"
-                        disabled={isSuggesting || isAuthLoading}
-                        onClick={handleSuggestPriceFlow}
-                      >
-                        <Lightbulb className="mr-2 h-4 w-4" />
-                        รับข้อเสนอแนะราคาโปรโมชั่น
-                      </Button>
-                      
-                      <Dialog open={isSuggestDialogOpen} onOpenChange={setIsSuggestDialogOpen}>
-                        <DialogContent>
-                          <Form {...suggestionForm}>
-                            <form onSubmit={suggestionForm.handleSubmit(handleSuggestPriceSubmit)} className="space-y-4">
-                              <DialogHeader>
-                                <DialogTitle>ข้อมูลสินค้าสำหรับ AI</DialogTitle>
-                                <DialogDescription>กรุณาให้ข้อมูลเกี่ยวกับสินค้าของคุณเพื่อให้ AI ช่วยแนะนำราคาโปรโมชั่นที่เหมาะสมที่สุด</DialogDescription>
-                              </DialogHeader>
-                              <FormField control={suggestionForm.control} name="productName" render={({ field }) => (<FormItem><FormLabel>ชื่อสินค้า</FormLabel><div className="relative"><Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="text" placeholder="เช่น เสื้อยืดลายแมว" className="pl-10" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
-                              <FormField control={suggestionForm.control} name="productDescription" render={({ field }) => (<FormItem><FormLabel>รายละเอียดสินค้า</FormLabel><div className="relative"><FileText className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" /><FormControl><Textarea placeholder="เช่น เสื้อยืดผ้าคอตตอน 100% ใส่สบาย ไม่ร้อน เหมาะกับอากาศเมืองไทย" className="pl-10" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
-                              <DialogFooter>
-                                <Button type="submit" disabled={isSuggesting}>{isSuggesting ? 'กำลังวิเคราะห์...' : 'รับข้อเสนอแนะ'}</Button>
-                              </DialogFooter>
-                            </form>
-                          </Form>
-                        </DialogContent>
-                      </Dialog>
-                    </>
-                  )}
                 </>
               )
             )}
@@ -610,101 +343,7 @@ export default function PriceCalculator() {
         </Card>
       )}
 
-      {isSuggesting && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Lightbulb className="h-6 w-6 text-yellow-500 animate-pulse" />กำลังวิเคราะห์ราคา...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-24"><p className="text-muted-foreground text-center animate-pulse">{thinkingMessage}</p></CardContent></Card>)}
-      
-      {suggestion && suggestion.shouldSuggest && suggestion.suggestedPrice && (
-        <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
-              <Lightbulb className="h-6 w-6 text-yellow-500" />
-              ราคาโปรโมชั่นที่แนะนำ
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-5xl font-bold text-primary tracking-tight">{suggestion.suggestedPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            {suggestion.reasoning && (
-              <Alert variant="default" className="bg-muted/50 border-transparent text-sm">
-                <Info className="h-4 w-4" />
-                <AlertTitle>เหตุผล</AlertTitle>
-                <AlertDescription>{suggestion.reasoning}</AlertDescription>
-              </Alert>
-            )}
-             <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive text-xs">
-                <Info className="h-4 w-4" />
-                <AlertTitle>ข้อควรระวัง</AlertTitle>
-                <AlertDescription>AI จาก Gemini เป็นเพียงการคาดการณ์เท่านั้น อาจจะเกิดข้อผิดพลาดได้ แนะนำให้ตรวจสอบข้อมูลซ้ำอีกครั้งก่อนนำไปใช้งานจริง</AlertDescription>
-              </Alert>
-          </CardContent>
-        </Card>
-      )}
-
-      {suggestion && !suggestion.shouldSuggest && (
-        <Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
-          <CardContent className="p-6 text-center">
-            <p className="text-muted-foreground">AI วิเคราะห์แล้วพบว่าราคาปัจจุบันเหมาะสมดีแล้ว จึงไม่มีข้อเสนอแนะเพิ่มเติม</p>
-            {suggestion.reasoning && (
-               <Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-sm">
-                <Info className="h-4 w-4" />
-                <AlertTitle>เหตุผล</AlertTitle>
-                <AlertDescription>{suggestion.reasoning}</AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      )}
-      
       {result && result.platform === 'shopee' && (<Card className="mt-8 w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Sparkles className="h-6 w-6 text-yellow-500" />ราคาแนะนำสำหรับช่องทางชำระเงินเพิ่มเติม (Shopee)</CardTitle><CardDescription className="text-center">ราคาโดยประมาณเมื่อลูกค้าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)</CardDescription></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="text-center p-6 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต (ผ่อนชำระ)</p><p className="text-4xl font-bold text-primary tracking-tight">{result.shopeeCreditCardPrice?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p></div><div className="text-center p-6 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p><p className="text-4xl font-bold text-primary tracking-tight">{result.shopeeSPayLaterPrice?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p></div><div className="md:col-span-2"><Alert variant="default" className="mt-4 bg-muted/50 border-transparent text-xs"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคาที่แสดงเป็นเพียง **การประมาณการ** โดยใช้อัตราค่าธรรมเนียมสูงสุด และยัง **ไม่รวมค่าขนส่ง** หรือ **ส่วนลดที่ Shopee รับผิดชอบ** ซึ่งอาจส่งผลให้ราคาจริงมีการเปลี่ยนแปลงได้</AlertDescription></Alert></div></CardContent></Card>)}
-      
-      <Dialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>จำเป็นต้องเข้าสู่ระบบ</DialogTitle>
-            <DialogDescription>
-              เพื่อใช้งานฟีเจอร์แนะนำราคาโดย AI คุณจำเป็นต้องเข้าสู่ระบบด้วยบัญชี Google เพื่อบันทึก API Key ของคุณ
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={handleGoogleSignIn} className="w-full">
-              <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-76.4 76.4A119.4 119.4 0 0 0 248 152c-66.6 0-120.9 54.4-120.9 120.9s54.3 120.9 120.9 120.9c47.7 0 88.1-27.1 108.3-65.7H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path></svg>
-              เข้าสู่ระบบด้วย Google
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isApiDialogOpen} onOpenChange={setIsApiDialogOpen}>
-        <DialogContent>
-          <Form {...apiKeyForm}>
-            <form onSubmit={apiKeyForm.handleSubmit(handleSaveApiKey)} className="space-y-4">
-              <DialogHeader>
-                <DialogTitle>กรุณาเพิ่ม Gemini API Key</DialogTitle>
-                <DialogDescription>
-                  เพื่อใช้งานฟีเจอร์แนะนำราคาโดย AI คุณจำเป็นต้องใช้ Gemini API Key ของคุณเอง คุณสามารถรับคีย์ได้จาก Google AI Studio
-                </DialogDescription>
-              </DialogHeader>
-              <FormField
-                control={apiKeyForm.control}
-                name="apiKey"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Gemini API Key</FormLabel>
-                    <div className="relative">
-                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <FormControl>
-                        <Input type="password" placeholder="กรอก API Key ของคุณ" className="pl-10" {...field} />
-                      </FormControl>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit">บันทึก</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
