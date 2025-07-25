@@ -54,10 +54,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number } } } = {
   shopee: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 8.56 }, // 8% + 7% VAT
-    'fashion': { name: 'สินค้าแฟชั่น', fee: 9.63 }, // 9% + 7% VAT
-    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 8.025 }, // 7.5% + 7% VAT
-    'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 }, // 8% + 7% VAT
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 8.56 + (3*1.07) }, // 8% + 3% + VAT
+    'fashion': { name: 'สินค้าแฟชั่น', fee: 9.63 + (3*1.07) }, // 9% + 3% + VAT
+    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 8.025 + (3*1.07) }, // 7.5% + 3% + VAT
+    'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 + (3*1.07) }, // 8% + 3% + VAT
   },
   lazada: {
     'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 4.28 },
@@ -200,8 +200,11 @@ export default function PriceCalculator() {
 
     let shopeePrices: { shopeeCreditCardPrice?: number, shopeeSPayLaterPrice?: number } = {};
     if (platform === 'shopee') {
-      const creditCardFeeRate = totalFeeRate + SHOPEE_EXTRA_FEES.creditCard;
-      const spayLaterFeeRate = totalFeeRate + SHOPEE_EXTRA_FEES.spayLater;
+      const baseCommission = PLATFORM_FEES[platform][category].fee - (3*1.07);
+      const baseFeeRate = (baseCommission / 100) + affiliateRate;
+      
+      const creditCardFeeRate = baseFeeRate + SHOPEE_EXTRA_FEES.creditCard;
+      const spayLaterFeeRate = baseFeeRate + SHOPEE_EXTRA_FEES.spayLater;
 
       shopeePrices.shopeeCreditCardPrice = calculateSellingPrice(totalCost, profitAmount, discount, creditCardFeeRate);
       shopeePrices.shopeeSPayLaterPrice = calculateSellingPrice(totalCost, profitAmount, discount, spayLaterFeeRate);
@@ -287,11 +290,11 @@ export default function PriceCalculator() {
                             if (!selectedPlatform) return null;
                             const platformCategory = PLATFORM_FEES[selectedPlatform]?.[cat];
                             if (!platformCategory) return null;
-                            let feeLabel = `~${platformCategory.fee}%`;
+                            let feeLabel = `~${platformCategory.fee.toFixed(2)}%`;
                             if (platform === 'shopee') {
-                                feeLabel = `${feeLabel} (รวม VAT)`;
+                                feeLabel = `${feeLabel} (รวม VAT และค่าธุรกรรม)`;
                             } else if (platformCategory.orderFee) {
-                                feeLabel = `~${platformCategory.fee}% + ${platformCategory.orderFee}%`
+                                feeLabel = `~${platformCategory.fee.toFixed(2)}% + ${platformCategory.orderFee.toFixed(2)}%`
                             }
 
                             return (
@@ -459,11 +462,11 @@ export default function PriceCalculator() {
                         <p className="text-2xl font-semibold text-foreground text-center">{result.platformFeeAmount.toFixed(2)}</p>
                         <div className="text-xs text-muted-foreground mt-2 space-y-1 text-center">
                           <p>
-                            ค่าคอมมิชชั่น: {result.commissionPercent}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.commissionAmount.toFixed(2)}
+                            ค่าคอมมิชชั่น: {result.commissionPercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.commissionAmount.toFixed(2)}
                           </p>
                           {result.orderFeeAmount > 0 && (
                             <p>
-                              ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}
+                              ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}
                             </p>
                           )}
                         </div>
@@ -546,3 +549,5 @@ export default function PriceCalculator() {
       )}
     </div>
   );
+
+    
