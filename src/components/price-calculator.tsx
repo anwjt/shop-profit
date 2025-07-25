@@ -393,7 +393,7 @@ export default function PriceCalculator() {
                   <div className="text-center p-6 bg-muted/50 rounded-lg">
                     <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)</p>
                     <p className="text-5xl font-bold text-primary tracking-tight mt-1">
-                        ≈ {formatPrice(getPsychologicalPrice(result.sellingPrice))}
+                        ≈ {getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                         (คำนวณจริง: {formatPrice(result.sellingPrice)})
