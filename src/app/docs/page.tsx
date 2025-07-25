@@ -13,6 +13,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { ArrowLeft, BookMarked, Calculator, Percent, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
@@ -71,13 +79,49 @@ export default function DocsPage() {
                             <span className="font-semibold text-foreground">ค่าธรรมเนียมการขาย (Commission Fee):</span> หักจากราคาขายที่ลดราคาแล้ว (ถ้ามี) อัตราแตกต่างกันไปในแต่ละหมวดหมู่สินค้า
                         </li>
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมธุรกรรมการชำระเงิน (Transaction Fee):</span> หักจากยอดรวมที่ผู้ซื้อชำระ (รวมค่าขนส่ง) ผ่านทุกช่องทางการชำระเงิน <span className="font-bold">เครื่องมือของเรารวมค่าธรรมเนียมส่วนนี้เข้าไปในค่าคอมมิชชั่นหลักแล้ว (ประมาณ 3%*1.07)</span> เพื่อให้การคำนวณครอบคลุมมากที่สุด
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมธุรกรรมการชำระเงิน (Transaction Fee):</span> หักจากยอดรวมที่ผู้ซื้อชำระ (รวมค่าขนส่ง) ผ่านทุกช่องทางการชำระเงิน <span className="font-bold">เครื่องมือของเรารวมค่าธรรมเนียมส่วนนี้เข้าไปในค่าคอมมิชชั่นหลักแล้ว (ประมาณ 3.21%)</span> เพื่อให้การคำนวณครอบคลุมมากที่สุด
                         </li>
                         <li>
                             <span className="font-semibold text-foreground">ราคานี้รวมภาษีมูลค่าเพิ่ม (VAT 7%) แล้ว</span>
                         </li>
                     </ul>
-                    <p className="mt-2 text-xs text-muted-foreground">*หมายเหตุ: สำหรับการผ่อนชำระผ่านบัตรเครดิต/SPayLater จะมีค่าธรรมเนียมเพิ่มเติม ซึ่งจะแสดงแยกในผลการคำนวณ</p>
+                     <Table className="mt-4">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>หมวดหมู่สินค้า</TableHead>
+                          <TableHead className="text-right">ค่าคอมฯ</TableHead>
+                          <TableHead className="text-right">ค่าธุรกรรม</TableHead>
+                          <TableHead className="text-right">รวม (ที่ใช้ในแอป)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell>สินค้าแฟชั่น</TableCell>
+                          <TableCell className="text-right">9.63%</TableCell>
+                          <TableCell className="text-right">~3.21%</TableCell>
+                          <TableCell className="text-right font-bold">~12.84%</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>สินค้าอิเล็กทรอนิกส์</TableCell>
+                          <TableCell className="text-right">8.56%</TableCell>
+                          <TableCell className="text-right">~3.21%</TableCell>
+                           <TableCell className="text-right font-bold">~11.77%</TableCell>
+                        </TableRow>
+                         <TableRow>
+                          <TableCell>สินค้าไลฟ์สไตล์</TableCell>
+                          <TableCell className="text-right">8.025%</TableCell>
+                           <TableCell className="text-right">~3.21%</TableCell>
+                           <TableCell className="text-right font-bold">~11.24%</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>สินค้าทั่วไป (นอกกลุ่มอิเล็กฯ)</TableCell>
+                          <TableCell className="text-right">8.56%</TableCell>
+                           <TableCell className="text-right">~3.21%</TableCell>
+                          <TableCell className="text-right font-bold">~11.77%</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                    <p className="mt-4 text-xs text-muted-foreground">*หมายเหตุ: สำหรับการผ่อนชำระผ่านบัตรเครดิต/SPayLater จะมีค่าธรรมเนียมเพิ่มเติม ซึ่งจะแสดงแยกในผลการคำนวณ</p>
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="lazada">
@@ -89,12 +133,54 @@ export default function DocsPage() {
                             <span className="font-semibold text-foreground">ค่าธรรมเนียมมาร์เก็ตเพลส (Marketplace Fee):</span> หักจากราคาขายสินค้า อัตราสูงสุดแตกต่างกันไปในแต่ละหมวดหมู่ (เครื่องมือใช้เรทสูงสุดในการคำนวณ)
                         </li>
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมการชำระเงิน (Payment Fee):</span> หักจากราคาขายสินค้าที่ 3%
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมการชำระเงิน (Payment Fee):</span> หักจากราคาขายสินค้าที่ 3% (รวม VAT เป็น 3.21%)
                         </li>
                          <li>
                             <span className="font-semibold text-foreground">ราคานี้รวมภาษีมูลค่าเพิ่ม (VAT 7%) แล้ว</span> (เช่น 8% จะกลายเป็น 8.56%)
                         </li>
                     </ul>
+                     <Table className="mt-4">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>หมวดหมู่สินค้า</TableHead>
+                          <TableHead className="text-right">ค่ามาร์เก็ตเพลส</TableHead>
+                          <TableHead className="text-right">ค่าชำระเงิน</TableHead>
+                          <TableHead className="text-right">รวม (ที่ใช้ในแอป)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                         <TableRow>
+                          <TableCell>สินค้าแฟชั่น (สูงสุด)</TableCell>
+                          <TableCell className="text-right">9.63%</TableCell>
+                          <TableCell className="text-right">3.21%</TableCell>
+                          <TableCell className="text-right font-bold">12.84%</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>สินค้าอิเล็กทรอนิกส์ (สูงสุด)</TableCell>
+                          <TableCell className="text-right">8.56%</TableCell>
+                          <TableCell className="text-right">3.21%</TableCell>
+                           <TableCell className="text-right font-bold">11.77%</TableCell>
+                        </TableRow>
+                         <TableRow>
+                          <TableCell>สินค้าทั่วไป (สูงสุด)</TableCell>
+                          <TableCell className="text-right">8.56%</TableCell>
+                           <TableCell className="text-right">3.21%</TableCell>
+                           <TableCell className="text-right font-bold">11.77%</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>สินค้าอุปโภคบริโภค (สูงสุด)</TableCell>
+                          <TableCell className="text-right">8.56%</TableCell>
+                           <TableCell className="text-right">3.21%</TableCell>
+                          <TableCell className="text-right font-bold">11.77%</TableCell>
+                        </TableRow>
+                         <TableRow>
+                          <TableCell>บัตรกำนัลดิจิทัล</TableCell>
+                          <TableCell className="text-right">7.49%</TableCell>
+                           <TableCell className="text-right">3.21%</TableCell>
+                          <TableCell className="text-right font-bold">10.70%</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="tiktok">
@@ -106,12 +192,42 @@ export default function DocsPage() {
                             <span className="font-semibold text-foreground">ค่าคอมมิชชั่น (Commission Fee):</span> หักจากราคาขายของสินค้าหลังจากหักส่วนลดแล้ว อัตราแตกต่างกันในแต่ละหมวดหมู่
                         </li>
                         <li>
-                            <span className="font-semibold text-foreground">ค่าธรรมเนียมคำสั่งซื้อ (Order Fee):</span> หรือที่เรียกว่าค่าธรรมเนียมคงที่ (Fixed Fee) หัก 3% จากราคาขายของสินค้าหลังจากหักส่วนลดแล้ว
+                            <span className="font-semibold text-foreground">ค่าธรรมเนียมคำสั่งซื้อ (Order Fee):</span> หรือที่เรียกว่าค่าธรรมเนียมคงที่ (Fixed Fee) หัก 3% จากราคาขายของสินค้าหลังจากหักส่วนลดแล้ว (รวม VAT เป็น 3.21%)
                         </li>
                          <li>
                             <span className="font-semibold text-foreground">ราคานี้รวมภาษีมูลค่าเพิ่ม (VAT 7%) แล้ว</span>
                         </li>
                     </ul>
+                     <Table className="mt-4">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>หมวดหมู่สินค้า</TableHead>
+                          <TableHead className="text-right">ค่าคอมมิชชั่น</TableHead>
+                          <TableHead className="text-right">ค่าธรรมเนียมคำสั่งซื้อ</TableHead>
+                          <TableHead className="text-right">รวม (ที่ใช้ในแอป)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell>สินค้าแฟชั่น</TableCell>
+                          <TableCell className="text-right">6.42%</TableCell>
+                          <TableCell className="text-right">3.21%</TableCell>
+                          <TableCell className="text-right font-bold">9.63%</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>สินค้าอิเล็กทรอนิกส์</TableCell>
+                          <TableCell className="text-right">5.35%</TableCell>
+                          <TableCell className="text-right">3.21%</TableCell>
+                           <TableCell className="text-right font-bold">8.56%</TableCell>
+                        </TableRow>
+                         <TableRow>
+                          <TableCell>สินค้าไลฟ์สไตล์</TableCell>
+                          <TableCell className="text-right">5.35%</TableCell>
+                           <TableCell className="text-right">3.21%</TableCell>
+                           <TableCell className="text-right font-bold">8.56%</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -132,3 +248,5 @@ export default function DocsPage() {
     </main>
   );
 }
+
+    
