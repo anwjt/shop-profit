@@ -12,7 +12,8 @@ import {
   Wallet,
   Store,
   LayoutGrid,
-  Info
+  Info,
+  Package,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,7 @@ type CalculationResult = {
   profit: number;
   commissionAmount: number;
   orderFeeAmount: number;
+  otherCosts: number;
   platform: string;
 };
 
@@ -97,7 +99,7 @@ export default function PriceCalculator() {
       cost: undefined,
       category: undefined,
       otherCosts: 0,
-      profitMargin: 20,
+      profitMargin: 0,
     },
   });
 
@@ -149,6 +151,7 @@ export default function PriceCalculator() {
       profit: finalProfit,
       commissionAmount: commissionAmount,
       orderFeeAmount: orderFeeAmount,
+      otherCosts: otherCosts,
       platform: platform
     };
     setResult(newResult);
@@ -205,9 +208,9 @@ export default function PriceCalculator() {
                     <FormItem>
                       <FormLabel>2. ราคาต้นทุน</FormLabel>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">฿</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                         <FormControl>
-                          <Input type="number" placeholder="100" className="pl-10" {...field} />
+                          <Input type="number" placeholder="100" className="pl-8" {...field} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -254,9 +257,9 @@ export default function PriceCalculator() {
                     <FormItem>
                       <FormLabel>4. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
                        <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">฿</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                         <FormControl>
-                          <Input type="number" placeholder="0" className="pl-10" {...field} />
+                          <Input type="number" placeholder="0" className="pl-8" {...field} />
                         </FormControl>
                       </div>
                       <FormDescription>เช่น ค่าแพ็คของ, ค่าเดินทาง</FormDescription>
@@ -300,6 +303,7 @@ export default function PriceCalculator() {
                  <Skeleton className="h-24 w-full" />
                  <Skeleton className="h-8 w-3/4 mx-auto" />
                  <Skeleton className="h-8 w-3/4 mx-auto" />
+                 <Skeleton className="h-8 w-3/4 mx-auto" />
               </div>
             ) : (
               result && (
@@ -326,6 +330,12 @@ export default function PriceCalculator() {
                        <p className="text-2xl font-semibold text-green-600 mt-1 text-center">{result.profit.toFixed(2)}</p>
                     </div>
                   </div>
+                  {result.otherCosts > 0 && (
+                     <div className="p-4 bg-muted/50 rounded-lg md:col-span-2">
+                       <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ</p>
+                       <p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p>
+                    </div>
+                  )}
                   <Alert variant="default" className="mt-4">
                       <Info className="h-4 w-4" />
                       <AlertTitle>ข้อควรทราบ</AlertTitle>
@@ -342,3 +352,5 @@ export default function PriceCalculator() {
     </div>
   );
 }
+
+    
