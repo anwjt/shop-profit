@@ -1,8 +1,17 @@
 import * as admin from 'firebase-admin';
+import serviceAccount from '../../serviceAccountKey.json';
 
 if (!admin.apps.length) {
-  admin.initializeApp();
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } catch (error) {
+    console.error('Firebase admin initialization error', error);
+  }
 }
 
-export const firestore = admin.firestore();
-export const authAdmin = admin.auth();
+const firestore = admin.firestore();
+const authAdmin = admin.auth();
+
+export { firestore, authAdmin };
