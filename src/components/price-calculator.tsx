@@ -60,9 +60,11 @@ const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: numb
     'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 + (3*1.07) }, // 8% + 3% + VAT
   },
   lazada: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 4.28 },
-    'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42 },
-    'general': { name: 'สินค้าทั่วไป', fee: 5.35 },
+    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์ (สูงสุด)', fee: 8.0 * 1.07 }, // 8% + VAT
+    'general': { name: 'สินค้าทั่วไป (สูงสุด)', fee: 8.0 * 1.07 }, // 8% + VAT
+    'fashion': { name: 'สินค้าแฟชั่น (สูงสุด)', fee: 9.0 * 1.07 }, // 9% + VAT
+    'fmcg': { name: 'สินค้าอุปโภคบริโภค', fee: 8.0 * 1.07 }, // 8% + VAT
+    'digital': { name: 'บัตรกำนัลดิจิทัล', fee: 7.0 * 1.07 }, // 7% + VAT
   },
   tiktok: {
     'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42, orderFee: 3.21 },
@@ -318,7 +320,7 @@ export default function PriceCalculator() {
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                         <FormControl>
-                          <Input type="number" placeholder="100" className="pl-8" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                          <Input type="number" placeholder="กรอกราคาต้นทุน" className="pl-8" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -334,7 +336,7 @@ export default function PriceCalculator() {
                       <div className="relative">
                         <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <FormControl>
-                          <Input type="number" placeholder="0" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                          <Input type="number" placeholder="กรอกกำไรที่ต้องการ" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -396,7 +398,7 @@ export default function PriceCalculator() {
                         <div className="relative">
                           <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <FormControl>
-                            <Input type="number" placeholder="0" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                            <Input type="number" placeholder="กรอกส่วนลด" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                           </FormControl>
                         </div>
                         <FormDescription>
@@ -415,7 +417,7 @@ export default function PriceCalculator() {
                         <div className="relative">
                           <Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <FormControl>
-                            <Input type="number" placeholder="0" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                            <Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                           </FormControl>
                         </div>
                         <FormDescription>
@@ -551,4 +553,5 @@ export default function PriceCalculator() {
   );
 
     
+
 
