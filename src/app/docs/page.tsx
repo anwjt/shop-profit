@@ -87,6 +87,7 @@ export default function DocsPage() {
                   <AccordionTrigger>Shopee</AccordionTrigger>
                   <AccordionContent>
                     <p className="font-semibold mb-2">ค่าธรรมเนียมของ Shopee ประกอบด้วย (ราคารวม VAT 7% แล้ว):</p>
+                    <p className="text-xs text-muted-foreground italic mb-3">ข้อมูลอ้างอิงล่าสุด: 20 มกราคม 2568</p>
                     <ul className="list-decimal list-inside space-y-2 mt-2 text-muted-foreground">
                         <li>
                             <span className="font-semibold text-foreground">ค่าธรรมเนียมการขาย (Commission Fee):</span> หักจากราคาขายสินค้าหลังหักส่วนลดร้านค้า อัตราแตกต่างกันไปในแต่ละหมวดหมู่
@@ -163,6 +164,7 @@ export default function DocsPage() {
                   <AccordionTrigger>Lazada</AccordionTrigger>
                   <AccordionContent>
                     <p className="font-semibold mb-2">ค่าธรรมเนียมของ Lazada ประกอบด้วย (ราคารวม VAT 7% แล้ว):</p>
+                    <p className="text-xs text-muted-foreground italic mb-3">ข้อมูลอ้างอิงล่าสุด: 5 มิถุนายน 2568</p>
                      <ul className="list-decimal list-inside space-y-2 mt-2 text-muted-foreground">
                         <li>
                             <span className="font-semibold text-foreground">ค่าธรรมเนียมมาร์เก็ตเพลส (Marketplace Fee):</span> หักจากราคาขายสินค้า อัตราสูงสุดแตกต่างกันไปในแต่ละหมวดหมู่
@@ -220,6 +222,7 @@ export default function DocsPage() {
                   <AccordionTrigger>TikTok Shop</AccordionTrigger>
                   <AccordionContent>
                      <p className="font-semibold mb-2">ค่าธรรมเนียมของ TikTok Shop ประกอบด้วย (ราคารวม VAT 7% แล้ว):</p>
+                     <p className="text-xs text-muted-foreground italic mb-3">ข้อมูลอ้างอิงล่าสุด: 1 มกราคม 2568</p>
                       <ul className="list-decimal list-inside space-y-2 mt-2 text-muted-foreground">
                         <li>
                             <span className="font-semibold text-foreground">ค่าคอมมิชชั่น (Commission Fee):</span> หักจากราคาขายของสินค้าหลังหักส่วนลดแล้ว อัตราแตกต่างกันในแต่ละหมวดหมู่
@@ -406,3 +409,5 @@ export default function DocsPage() {
     </main>
   );
 }
+
+    
