@@ -158,7 +158,7 @@ export default function PriceCalculator() {
   const [isSuggestDialogOpen, setIsSuggestDialogOpen] = useState(false);
   
   const [user, setUser] = useState<User | null>(null);
-  const [hasApiKey, setHasApiKey] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null); // null means unknown
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -169,12 +169,7 @@ export default function PriceCalculator() {
       if (currentUser) {
         setUser(currentUser);
         const key = await getApiKey(currentUser.uid);
-        if (key) {
-          setHasApiKey(true);
-        } else {
-          setHasApiKey(false);
-          setIsApiDialogOpen(true);
-        }
+        setHasApiKey(!!key);
       } else {
         setUser(null);
         setHasApiKey(false);
@@ -222,7 +217,12 @@ export default function PriceCalculator() {
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const key = await getApiKey(result.user.uid);
+      if (!key) {
+        // After successful sign-in, if no key, open API dialog
+        setIsApiDialogOpen(true);
+      }
     } catch (error) {
       console.error("Error signing in with Google:", error);
       toast({
@@ -251,6 +251,8 @@ export default function PriceCalculator() {
         title: 'บันทึกสำเร็จ',
         description: 'API Key ของคุณถูกบันทึกเรียบร้อยแล้ว',
       });
+      // After saving key, open the suggestion dialog
+      setIsSuggestDialogOpen(true);
     } else {
       toast({
         variant: 'destructive',
@@ -316,7 +318,23 @@ export default function PriceCalculator() {
     setIsLoading(false);
   }
 
-  const handleSuggestPrice = async (suggestionValues: SuggestionFormValues) => {
+  const handleSuggestPriceFlow = () => {
+    if (isSuggesting) return;
+
+    if (!user) {
+      handleGoogleSignIn();
+      return;
+    }
+
+    if (!hasApiKey) {
+      setIsApiDialogOpen(true);
+      return;
+    }
+    
+    setIsSuggestDialogOpen(true);
+  };
+
+  const handleSuggestPriceSubmit = async (suggestionValues: SuggestionFormValues) => {
     if (!result || !user) return;
     setIsSuggesting(true);
     setSuggestion(null);
@@ -563,7 +581,38 @@ export default function PriceCalculator() {
                   </div>
                   {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{result.otherCosts > 0 && (<div className="p-4 bg-muted/50 rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.otherCosts.toFixed(2)}</p></div>)}{result.affiliateCommissionAmount > 0 && (<div className={`p-4 bg-muted/50 rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">{result.affiliateCommissionAmount.toFixed(2)}</p></div>)}</div>)}
                   <Alert variant="default" className="mt-4 bg-muted/50 border-transparent"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคานี้เป็นการคำนวณเบื้องต้น อาจมีการเปลี่ยนแปลงจากค่าธรรมเนียมส่งเสริมการขาย, ค่าขนส่ง, หรือส่วนลดอื่นๆ ของแพลตฟอร์ม</AlertDescription></Alert>
-                  {!suggestion && (<Dialog open={isSuggestDialogOpen} onOpenChange={setIsSuggestDialogOpen}><DialogTrigger asChild><Button variant="outline" className="w-full mt-4" disabled={isSuggesting || !user || !hasApiKey}><Lightbulb className="mr-2 h-4 w-4" />{!user ? 'กรุณาเข้าสู่ระบบก่อน' : !hasApiKey ? 'กรุณาเพิ่ม API Key' : 'รับข้อเสนอแนะราคาโปรโมชั่น'}</Button></DialogTrigger><DialogContent><Form {...suggestionForm}><form onSubmit={suggestionForm.handleSubmit(handleSuggestPrice)} className="space-y-4"><DialogHeader><DialogTitle>ข้อมูลสินค้าสำหรับ AI</DialogTitle><DialogDescription>กรุณาให้ข้อมูลเกี่ยวกับสินค้าของคุณเพื่อให้ AI ช่วยแนะนำราคาโปรโมชั่นที่เหมาะสมที่สุด</DialogDescription></DialogHeader><FormField control={suggestionForm.control} name="productName" render={({ field }) => (<FormItem><FormLabel>ชื่อสินค้า</FormLabel><div className="relative"><Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="text" placeholder="เช่น เสื้อยืดลายแมว" className="pl-10" {...field} /></FormControl></div><FormMessage /></FormItem>)} /><FormField control={suggestionForm.control} name="productDescription" render={({ field }) => (<FormItem><FormLabel>รายละเอียดสินค้า</FormLabel><div className="relative"><FileText className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" /><FormControl><Textarea placeholder="เช่น เสื้อยืดผ้าคอตตอน 100% ใส่สบาย ไม่ร้อน เหมาะกับอากาศเมืองไทย" className="pl-10" {...field} /></FormControl></div><FormMessage /></FormItem>)} /><DialogFooter><Button type="submit" disabled={isSuggesting}>{isSuggesting ? 'กำลังวิเคราะห์...' : 'รับข้อเสนอแนะ'}</Button></DialogFooter></form></Form></DialogContent></Dialog>)}
+                  
+                  {!suggestion && (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="w-full mt-4"
+                        disabled={isSuggesting || isAuthLoading}
+                        onClick={handleSuggestPriceFlow}
+                      >
+                        <Lightbulb className="mr-2 h-4 w-4" />
+                        รับข้อเสนอแนะราคาโปรโมชั่น
+                      </Button>
+                      
+                      <Dialog open={isSuggestDialogOpen} onOpenChange={setIsSuggestDialogOpen}>
+                        <DialogContent>
+                          <Form {...suggestionForm}>
+                            <form onSubmit={suggestionForm.handleSubmit(handleSuggestPriceSubmit)} className="space-y-4">
+                              <DialogHeader>
+                                <DialogTitle>ข้อมูลสินค้าสำหรับ AI</DialogTitle>
+                                <DialogDescription>กรุณาให้ข้อมูลเกี่ยวกับสินค้าของคุณเพื่อให้ AI ช่วยแนะนำราคาโปรโมชั่นที่เหมาะสมที่สุด</DialogDescription>
+                              </DialogHeader>
+                              <FormField control={suggestionForm.control} name="productName" render={({ field }) => (<FormItem><FormLabel>ชื่อสินค้า</FormLabel><div className="relative"><Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="text" placeholder="เช่น เสื้อยืดลายแมว" className="pl-10" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
+                              <FormField control={suggestionForm.control} name="productDescription" render={({ field }) => (<FormItem><FormLabel>รายละเอียดสินค้า</FormLabel><div className="relative"><FileText className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" /><FormControl><Textarea placeholder="เช่น เสื้อยืดผ้าคอตตอน 100% ใส่สบาย ไม่ร้อน เหมาะกับอากาศเมืองไทย" className="pl-10" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
+                              <DialogFooter>
+                                <Button type="submit" disabled={isSuggesting}>{isSuggesting ? 'กำลังวิเคราะห์...' : 'รับข้อเสนอแนะ'}</Button>
+                              </DialogFooter>
+                            </form>
+                          </Form>
+                        </DialogContent>
+                      </Dialog>
+                    </>
+                  )}
                 </>
               )
             )}
