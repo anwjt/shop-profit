@@ -65,6 +65,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { PLATFORM_FEES, calculatePrice, type CalculationResult, getPlatformCategories, formatPrice, getPsychologicalPrice } from '@/lib/price-calculation';
+import { FormControl, FormItem } from '@/components/ui/form';
 
 export type StockItem = {
   id: string;
@@ -763,3 +764,5 @@ export default function NotionTablePage() {
     </>
   );
 }
+
+    
