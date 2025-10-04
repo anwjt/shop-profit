@@ -138,10 +138,14 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
 
   export const getPlatformCategories = () => {
     return Object.keys(PLATFORM_FEES).reduce((acc, platform) => {
-        acc[platform] = Object.keys(PLATFORM_FEES[platform]).map(catId => ({
-            id: catId,
-            name: PLATFORM_FEES[platform][catId].name
-        }));
+        acc[platform] = Object.keys(PLATFORM_FEES[platform]).map(catId => {
+            const category = PLATFORM_FEES[platform][catId];
+            const totalFee = (category.fee || 0) + (category.orderFee || 0) + (category.paymentFee || 0);
+            return {
+                id: catId,
+                name: `${category.name} (~${totalFee.toFixed(2)}%)`
+            }
+        });
         return acc;
     }, {} as {[key: string]: {id: string, name: string}[]});
   }
