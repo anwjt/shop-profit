@@ -76,6 +76,10 @@ type FormData = z.infer<typeof formSchema>;
 
 const platformCategories = getPlatformCategories();
 const platforms = Object.keys(platformCategories).map(p => p.charAt(0).toUpperCase() + p.slice(1).replace('-', ' '));
+const allCategories = Object.values(platformCategories)
+  .flat()
+  .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 
 export default function NotionTablePage() {
@@ -473,14 +477,14 @@ export default function NotionTablePage() {
                                 name="category"
                                 render={({ field }) => (
                                 <FormItem>
-                                  <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatformForForm}>
+                                  <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                       <SelectTrigger>
-                                          <SelectValue placeholder="เลือกหมวดหมู่ (ต้องเลือกแพลตฟอร์มก่อน)" />
+                                          <SelectValue placeholder="เลือกหมวดหมู่" />
                                       </SelectTrigger>
                                     </FormControl>
                                       <SelectContent>
-                                          {platformCategories[selectedPlatformForForm?.toLowerCase().replace(' ','-') || '']?.map(cat => (
+                                          {allCategories.map(cat => (
                                               <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                           ))}
                                       </SelectContent>
@@ -554,3 +558,5 @@ export default function NotionTablePage() {
     </>
   );
 }
+
+    
