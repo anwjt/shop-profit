@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart, CheckCircle, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart, CheckCircle, ChevronLeft, ChevronRight, Filter, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,20 +71,26 @@ export type StockItem = {
   sku: string;
   price: number;
   status: 'ขายแล้ว' | 'รอขาย';
-  platform: string;
+  platform: string; // Now a comma-separated string
   category: string;
 };
 
-const stockItemSchema = z.object({
-    name: z.string().min(1, 'ชื่อสินค้าห้ามว่าง'),
-    sku: z.string().min(1, 'SKU ห้ามว่าง'),
-    price: z.coerce.number().min(0, 'ราคาต้องเป็นตัวเลขไม่ติดลบ'),
-    status: z.enum(['ขายแล้ว', 'รอขาย']),
-    platform: z.string().min(1, "กรุณาเลือกแพลตฟอร์ม"),
-    category: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
+const platforms = ["Shopee", "Lazada", "TikTok Shop"] as const;
+
+const skuSchema = z.object({
+  sku: z.string().min(1, "SKU ห้ามว่าง"),
+  platforms: z.array(z.string()).min(1, "ต้องเลือกอย่างน้อย 1 แพลตฟอร์ม"),
 });
 
-type StockItemFormData = z.infer<typeof stockItemSchema>;
+const stockItemFormSchema = z.object({
+  name: z.string().min(1, 'ชื่อสินค้าห้ามว่าง'),
+  price: z.coerce.number().min(0, 'ราคาต้องเป็นตัวเลขไม่ติดลบ'),
+  category: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
+  skus: z.array(skuSchema).min(1, "ต้องมีอย่างน้อย 1 SKU"),
+});
+
+
+type StockItemFormData = z.infer<typeof stockItemFormSchema>;
 
 const platformCategories = getPlatformCategories();
 
@@ -94,8 +100,11 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
     const [customProfit, setCustomProfit] = useState(20);
 
     const calculationResult = useMemo(() => {
-        if (!item) return null;
+        if (!item || !item.platform) return null;
 
+        // Use the first platform for calculation if multiple exist
+        const platformToCalculate = item.platform.split(',')[0].trim().toLowerCase();
+        
         let profitValue: { profitMargin?: number; profitAmount?: number } = { profitMargin: 20 };
 
         if (noProfit) {
@@ -103,9 +112,9 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
         } else if (editProfit) {
             profitValue = { profitMargin: customProfit };
         }
-
+        
         return calculatePrice({
-            platform: item.platform.toLowerCase(),
+            platform: platformToCalculate,
             category: item.category,
             cost: item.price,
             ...profitValue,
@@ -126,11 +135,14 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
         }
     };
 
+    if (!item) return null;
+    const displayPlatform = item.platform.split(',')[0].trim();
+
     return (
         <DialogContent className="max-w-2xl">
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                    <Calculator /> {`ผลคำนวณสำหรับ "${item?.name}"`}
+                    <Calculator /> {`ผลคำนวณสำหรับ "${item.name}" บน ${displayPlatform}`}
                 </DialogTitle>
                 <DialogDescription>
                     ผลการคำนวณราคาขายสำหรับสินค้าชิ้นนี้บนแพลตฟอร์มที่เลือก
@@ -241,33 +253,32 @@ export default function NotionTablePage() {
   const { toast } = useToast();
 
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm<StockItemFormData>({
-    resolver: zodResolver(stockItemSchema),
+    resolver: zodResolver(stockItemFormSchema),
     defaultValues: {
-        status: 'รอขาย',
-        platform: 'Shopee',
-        category: 'other',
+      name: '',
+      price: undefined,
+      category: '',
+      skus: [{ sku: '', platforms: [] }],
     }
   });
 
-  const selectedPlatformForForm = watch('platform');
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "skus",
+  });
+  
+  const selectedPlatformForForm = watch('category') ? Object.keys(platformCategories).find(p => platformCategories[p].some(c => c.id === watch('category'))) : '';
   
   useEffect(() => {
     fetchData();
   }, []);
-  
-  useEffect(() => {
-    if(selectedPlatformForForm) {
-        setValue('category', '');
-    }
-  }, [selectedPlatformForForm, setValue]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [platformFilter, rowsPerPage]);
 
-
   const filteredData = useMemo(() => {
-      return data.filter(item => platformFilter === 'all' || item.platform === platformFilter);
+      return data.filter(item => platformFilter === 'all' || item.platform.includes(platformFilter));
   }, [data, platformFilter]);
 
   const paginatedData = useMemo(() => {
@@ -301,14 +312,17 @@ export default function NotionTablePage() {
     if (item) {
         reset({
             name: item.name,
-            sku: item.sku,
             price: item.price,
-            status: item.status,
-            platform: item.platform,
             category: item.category,
+            skus: [{ sku: item.sku, platforms: item.platform.split(',').map(p => p.trim()) }],
         });
     } else {
-        reset({ name: '', sku: '', price: 0, status: 'รอขาย', platform: 'Shopee', category: '' });
+        reset({
+          name: '',
+          price: undefined,
+          category: '',
+          skus: [{ sku: '', platforms: [] }],
+        });
     }
     setIsFormOpen(true);
   };
@@ -318,37 +332,49 @@ export default function NotionTablePage() {
   };
 
   const handleFormSubmit = async (formData: StockItemFormData) => {
-    const url = '/api/notion';
-    const method = editingItem ? 'PATCH' : 'POST';
-    const body = JSON.stringify(editingItem ? { ...formData, id: editingItem.id } : formData);
-
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
+        const { name, price, category } = formData;
+        
+        // This will hold all the promises for creating items
+        const creationPromises = formData.skus.flatMap(skuItem => {
+            const { sku, platforms } = skuItem;
+            // Create a new item for each platform selected for a given SKU
+            return platforms.map(platform => {
+                const payload = {
+                    name,
+                    price,
+                    category,
+                    sku,
+                    platform: [platform], // Send as an array for multi-select
+                    status: 'รอขาย'
+                };
+                return fetch('/api/notion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+            });
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Operation failed');
-      }
+        const responses = await Promise.all(creationPromises);
 
-      const result: StockItem = await response.json();
+        let hasError = false;
+        for (const response of responses) {
+            if (!response.ok) {
+                hasError = true;
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'An operation failed');
+            }
+        }
 
-      if (editingItem) {
-        setData(data.map(item => (item.id === result.id ? result : item)));
-        toast({ title: "✅ อัปเดตสำเร็จ", description: `สินค้า "${result.name}" ถูกแก้ไขแล้ว` });
-      } else {
-        setData([result, ...data].sort((a, b) => a.name.localeCompare(b.name)));
-        toast({ title: "✅ เพิ่มสินค้าสำเร็จ", description: `"${result.name}" ถูกเพิ่มในรายการแล้ว` });
-      }
+        toast({ title: "✅ เพิ่มสินค้าสำเร็จ", description: `สินค้าถูกเพิ่มใน Notion เรียบร้อยแล้ว` });
+        fetchData(); // Refresh data from Notion
+        setIsFormOpen(false);
 
-      setIsFormOpen(false);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+        toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
     }
-  };
+};
 
   const updateItemStatus = async (item: StockItem, newStatus: StockItem['status']) => {
     try {
@@ -419,6 +445,7 @@ export default function NotionTablePage() {
             <ul className="list-disc list-inside mt-2 text-xs">
               <li>ตรวจสอบว่า `NOTION_API_KEY` และ `NOTION_DATABASE_ID` ในไฟล์ `.env.local` ถูกต้อง</li>
               <li>ตรวจสอบว่า Integration ของคุณได้ถูกเชิญให้เข้าถึง Database ใน Notion และได้รับสิทธิ์ในการ "Read", "Update", และ "Insert"</li>
+               <li>ตรวจสอบว่าคอลัมน์ `Platform` ใน Notion ถูกตั้งค่าเป็น **Multi-select**</li>
               <li>ตรวจสอบว่าชื่อและประเภทของคอลัมน์ (Property) ใน Notion ตรงกับที่กำหนดใน `src/app/api/notion/route.ts`</li>
               <li><span className="font-mono bg-destructive-foreground/20 p-1 rounded">Error: {error}</span></li>
             </ul>
@@ -487,9 +514,9 @@ export default function NotionTablePage() {
                                   </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleOpenForm(item)}>
+                                  <DropdownMenuItem onClick={() => handleOpenForm(item)} disabled={true} title="การแก้ไขแบบ Multi-SKU จะพร้อมในเร็วๆ นี้">
                                       <Edit className="mr-2 h-4 w-4" />
-                                      <span>แก้ไข</span>
+                                      <span>แก้ไข (เร็วๆ นี้)</span>
                                   </DropdownMenuItem>
                                   <AlertDialog>
                                       <AlertDialogTrigger asChild>
@@ -639,7 +666,7 @@ export default function NotionTablePage() {
 
       {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-xl">
             <form onSubmit={handleSubmit(handleFormSubmit)}>
                 <DialogHeader>
                     <DialogTitle>{editingItem ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</DialogTitle>
@@ -647,8 +674,8 @@ export default function NotionTablePage() {
                         {editingItem ? 'แก้ไขรายละเอียดสินค้าด้านล่าง' : 'กรอกรายละเอียดสินค้าใหม่เพื่อเพิ่มในฐานข้อมูล'}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
+                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
+                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right">ชื่อสินค้า</Label>
                         <div className="col-span-3">
                             <Input id="name" {...register('name')} className={errors.name ? 'border-destructive' : ''} />
@@ -656,30 +683,21 @@ export default function NotionTablePage() {
                         </div>
                     </div>
                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="platform" className="text-right">แพลตฟอร์ม</Label>
+                        <Label htmlFor="price" className="text-right">ต้นทุน</Label>
                         <div className="col-span-3">
-                            <Select onValueChange={(value) => setValue('platform', value)} defaultValue={editingItem?.platform || 'Shopee'}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="เลือกแพลตฟอร์ม" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Shopee">Shopee</SelectItem>
-                                    <SelectItem value="Lazada">Lazada</SelectItem>
-                                    <SelectItem value="TikTok Shop">TikTok Shop</SelectItem>
-                                </SelectContent>
-                            </Select>
-                             {errors.platform && <p className="text-xs text-destructive mt-1">{errors.platform.message}</p>}
+                           <Input id="price" type="number" step="0.01" {...register('price')} className={errors.price ? 'border-destructive' : ''}/>
+                           {errors.price && <p className="text-xs text-destructive mt-1">{errors.price.message}</p>}
                         </div>
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
+                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
                         <div className="col-span-3">
-                            <Select onValueChange={(value) => setValue('category', value)} value={watch('category')} disabled={!selectedPlatformForForm}>
+                            <Select onValueChange={(value) => setValue('category', value)} value={watch('category')}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="เลือกหมวดหมู่" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {platformCategories[selectedPlatformForForm.toLowerCase()]?.map(cat => (
+                                    {Object.keys(platformCategories).flatMap(p => platformCategories[p]).filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i).map(cat => (
                                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -687,45 +705,64 @@ export default function NotionTablePage() {
                              {errors.category && <p className="text-xs text-destructive mt-1">{errors.category.message}</p>}
                         </div>
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="price" className="text-right">ต้นทุน</Label>
-                        <div className="col-span-3">
-                           <Input id="price" type="number" step="0.01" {...register('price')} className={errors.price ? 'border-destructive' : ''}/>
-                           {errors.price && <p className="text-xs text-destructive mt-1">{errors.price.message}</p>}
+
+                    <div className='space-y-4 rounded-lg border p-4'>
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="space-y-3">
+                          <div className='flex items-center gap-2'>
+                            <Label htmlFor={`skus.${index}.sku`} className="flex-shrink-0">SKU #{index + 1}</Label>
+                            <div className='flex-grow'>
+                               <Input id={`skus.${index}.sku`} {...register(`skus.${index}.sku`)} placeholder="รหัสสินค้า" className={errors.skus?.[index]?.sku ? 'border-destructive' : ''} />
+                               {errors.skus?.[index]?.sku && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.sku?.message}</p>}
+                            </div>
+                            {fields.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><XCircle className="h-5 w-5 text-destructive" /></Button>}
+                          </div>
+
+                          <div className="pl-4">
+                            <Label>สำหรับแพลตฟอร์ม</Label>
+                            <Controller
+                              name={`skus.${index}.platforms`}
+                              control={control}
+                              render={({ field: controllerField }) => (
+                                <div className="flex flex-wrap gap-4 mt-2">
+                                  {platforms.map((platform) => (
+                                    <div key={platform} className="flex items-center gap-2">
+                                      <Checkbox
+                                        id={`skus.${index}.platforms.${platform}`}
+                                        checked={controllerField.value?.includes(platform)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? controllerField.onChange([...(controllerField.value || []), platform])
+                                            : controllerField.onChange(
+                                                (controllerField.value || []).filter(
+                                                  (value) => value !== platform
+                                                )
+                                              );
+                                        }}
+                                      />
+                                      <label htmlFor={`skus.${index}.platforms.${platform}`} className="text-sm font-medium">
+                                        {platform}
+                                      </label>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            />
+                             {errors.skus?.[index]?.platforms && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.platforms?.message}</p>}
+                          </div>
+                          {index < fields.length - 1 && <hr className='my-4'/>}
                         </div>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="sku" className="text-right">SKU</Label>
-                        <div className="col-span-3">
-                            <Input id="sku" {...register('sku')} className={errors.sku ? 'border-destructive' : ''}/>
-                            {errors.sku && <p className="text-xs text-destructive mt-1">{errors.sku.message}</p>}
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="status" className="text-right">สถานะ</Label>
-                        <div className="col-span-3">
-                            <Select 
-                                onValueChange={(value) => setValue('status', value as StockItem['status'])} 
-                                value={watch('status')}
-                                defaultValue={editingItem?.status || 'รอขาย'}
-                                disabled={!editingItem}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="เลือกสถานะ" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="รอขาย">รอขาย</SelectItem>
-                                    <SelectItem value="ขายแล้ว">ขายแล้ว</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                      ))}
+                      <Button type="button" variant="outline" size="sm" onClick={() => append({ sku: '', platforms: [] })}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> เพิ่ม SKU
+                      </Button>
                     </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="ghost">ยกเลิก</Button>
                     </DialogClose>
-                    <Button type="submit">{editingItem ? 'บันทึกการเปลี่ยนแปลง' : 'สร้างสินค้า'}</Button>
+                    <Button type="submit" disabled={editingItem !== null}>{editingItem ? 'บันทึกการเปลี่ยนแปลง' : 'สร้างสินค้า'}</Button>
                 </DialogFooter>
             </form>
         </DialogContent>
@@ -738,9 +775,5 @@ export default function NotionTablePage() {
     </>
   );
 }
-    
-    
-
-    
 
     

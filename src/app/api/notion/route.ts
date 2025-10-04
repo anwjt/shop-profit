@@ -11,7 +11,7 @@ const PROPERTY_NAMES = {
   sku: 'SKU',
   price: 'Price',
   status: 'Status',
-  platform: 'Platform',
+  platform: 'Platform', // Ensure this is a Multi-select property in Notion
   category: 'Category',
 };
 // ---------------------
@@ -33,7 +33,8 @@ function pageToStockItem(page: any): StockItem | null {
     const sku = properties[PROPERTY_NAMES.sku]?.rich_text[0]?.plain_text ?? '';
     const price = properties[PROPERTY_NAMES.price]?.number ?? 0;
     const status = properties[PROPERTY_NAMES.status]?.select?.name ?? 'รอขาย';
-    const platform = properties[PROPERTY_NAMES.platform]?.select?.name ?? '';
+    // Handle multi_select for platform
+    const platforms = properties[PROPERTY_NAMES.platform]?.multi_select.map((p: { name: string }) => p.name) ?? [];
     const category = properties[PROPERTY_NAMES.category]?.select?.name ?? '';
 
     const validStatus = ['ขายแล้ว', 'รอขาย'].includes(status) 
@@ -46,7 +47,7 @@ function pageToStockItem(page: any): StockItem | null {
       sku,
       price,
       status: validStatus,
-      platform,
+      platform: platforms.join(', '), // Join for display, original array might be needed elsewhere
       category,
     };
   } catch (error) {
@@ -90,6 +91,8 @@ export async function POST(req: NextRequest) {
   try {
     const { name, sku, price, status, platform, category } = await req.json();
 
+    const platformPayload = Array.isArray(platform) ? platform.map(p => ({ name: p })) : [];
+
     const response = await notion.pages.create({
       parent: { database_id: databaseId },
       properties: {
@@ -97,7 +100,7 @@ export async function POST(req: NextRequest) {
         [PROPERTY_NAMES.sku]: { rich_text: [{ text: { content: sku } }] },
         [PROPERTY_NAMES.price]: { number: price },
         [PROPERTY_NAMES.status]: { select: { name: status } },
-        [PROPERTY_NAMES.platform]: { select: { name: platform } },
+        [PROPERTY_NAMES.platform]: { multi_select: platformPayload },
         [PROPERTY_NAMES.category]: { select: { name: category } },
       },
     });
@@ -132,7 +135,10 @@ export async function PATCH(req: NextRequest) {
       if (data.sku !== undefined) properties[PROPERTY_NAMES.sku] = { rich_text: [{ text: { content: data.sku } }] };
       if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
       if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
-      if (data.platform) properties[PROPERTY_NAMES.platform] = { select: { name: data.platform } };
+      if (data.platform) {
+        const platformPayload = Array.isArray(data.platform) ? data.platform.map((p: string) => ({ name: p })) : [];
+        properties[PROPERTY_NAMES.platform] = { multi_select: platformPayload };
+      }
       if (data.category) properties[PROPERTY_NAMES.category] = { select: { name: data.category } };
   
       const response = await notion.pages.update({
@@ -176,3 +182,5 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: error.body?.message || error.message || 'Failed to delete item in Notion.' }, { status: 500 });
     }
 }
+
+    
