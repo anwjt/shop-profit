@@ -151,7 +151,7 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
                     <Calculator /> {`ผลคำนวณสำหรับ "${item.name}" บน ${displayPlatform}`}
                 </DialogTitle>
                 <DialogDescription>
-                    ผลการคำนวณราคาขายสำหรับสินค้าชิ้นนี้บนแพลตฟอร์มที่เลือก
+                    ผลการคำนวณราคาขายโดยใช้กำไรเริ่มต้นที่ 20% คุณสามารถปรับเปลี่ยนการคำนวณกำไรด้านล่างได้
                 </DialogDescription>
             </DialogHeader>
             {calculationResult ? (
