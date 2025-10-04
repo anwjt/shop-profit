@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -670,3 +671,5 @@ export default function ProductDetailPage({ params }: { params: { name: string }
     </>
   );
 }
+
+    
