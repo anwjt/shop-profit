@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -107,18 +107,19 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
     const calculationResult = useMemo(() => {
         if (!item) return null;
 
-        let profitMargin = 20;
+        let profitValue: { profitMargin?: number; profitAmount?: number } = { profitMargin: 20 };
+
         if (noProfit) {
-            profitMargin = 0;
+            profitValue = { profitMargin: 0 };
         } else if (editProfit) {
-            profitMargin = customProfit;
+            profitValue = { profitMargin: customProfit };
         }
 
         return calculatePrice({
             platform: item.platform.toLowerCase(),
             category: item.category,
             cost: item.price,
-            profitMargin: profitMargin,
+            ...profitValue,
         });
     }, [item, noProfit, editProfit, customProfit]);
 
@@ -464,9 +465,9 @@ export default function NotionTablePage() {
                            <ShoppingCart className="mr-2 h-4 w-4" /> ขายแล้ว
                         </Button>
                     ) : (
-                       <Button variant="ghost" size="sm" disabled>
-                           -
-                        </Button>
+                       <div className="flex justify-center items-center">
+                         <CheckCircle className="h-5 w-5 text-green-500" />
+                       </div>
                     )}
                 </TableCell>
                 <TableCell className="text-right">
@@ -648,5 +649,4 @@ export default function NotionTablePage() {
     </>
   );
 }
-
     
