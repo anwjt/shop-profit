@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -18,21 +19,21 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Mock data simulating a response from a Notion database
-const mockStockData = [
-  { id: '1', name: 'เคสโทรศัพท์ลายแมว', stock: 85, price: 159, status: 'In Stock' },
-  { id: '2', name: 'เสื้อยืดสีขาว', stock: 120, price: 299, status: 'In Stock' },
-  { id: '3', name: 'แก้วน้ำเก็บความเย็น', stock: 0, price: 450, status: 'Out of Stock' },
-  { id: '4', name: 'พาวเวอร์แบงค์ 10000mAh', stock: 5, price: 790, status: 'Low Stock' },
-  { id: '5', name: 'หูฟังไร้สาย TWS', stock: 32, price: 1290, status: 'In Stock' },
-  { id: '6', name: 'คีย์บอร์ด Mechanical', stock: 2, price: 2500, status: 'Low Stock' },
-];
 
-const getStatusVariant = (status: string) => {
+export type StockItem = {
+  id: string;
+  name: string;
+  stock: number;
+  price: number;
+  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+};
+
+const getStatusVariant = (status: StockItem['status']) => {
   switch (status) {
     case 'In Stock':
       return 'default';
@@ -46,6 +47,106 @@ const getStatusVariant = (status: string) => {
 };
 
 export default function NotionTablePage() {
+  const [data, setData] = useState<StockItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/notion');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        setData(result);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => (
+             <div key={i} className="flex items-center space-x-4 p-4">
+                <div className="space-y-2 flex-grow">
+                    <Skeleton className="h-4 w-3/4" />
+                </div>
+                <Skeleton className="h-6 w-24 rounded-full" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <Alert variant="destructive">
+          <ServerCrash className="h-4 w-4" />
+          <AlertTitle>เกิดข้อผิดพลาดในการเชื่อมต่อกับ Notion</AlertTitle>
+          <AlertDescription>
+            <p>ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการตั้งค่าและลองใหม่อีกครั้ง:</p>
+            <ul className="list-disc list-inside mt-2 text-xs">
+              <li>ตรวจสอบว่า `NOTION_API_KEY` และ `NOTION_DATABASE_ID` ในไฟล์ `.env.local` ถูกต้อง</li>
+              <li>ตรวจสอบว่า Integration ของคุณได้ถูกเชิญให้เข้าถึง Database ใน Notion แล้ว</li>
+               <li><span className="font-mono bg-destructive-foreground/20 p-1 rounded">Error: {error}</span></li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (data.length === 0) {
+        return (
+             <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>ไม่พบข้อมูล</AlertTitle>
+                <AlertDescription>
+                    ไม่พบข้อมูลสินค้าในฐานข้อมูล Notion หรือฐานข้อมูลอาจจะว่างเปล่า
+                </AlertDescription>
+            </Alert>
+        )
+    }
+
+    return (
+      <div className="overflow-x-auto rounded-lg border">
+        <UiTable>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ชื่อสินค้า</TableHead>
+              <TableHead className="text-center">สถานะ</TableHead>
+              <TableHead className="text-right">จำนวนในสต็อก</TableHead>
+              <TableHead className="text-right">ราคา (บาท)</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.name}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
+                </TableCell>
+                <TableCell className="text-right">{item.stock}</TableCell>
+                <TableCell className="text-right font-bold">{item.price.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </UiTable>
+      </div>
+    );
+  }
 
   return (
     <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-8">
@@ -56,45 +157,14 @@ export default function NotionTablePage() {
               <Table className="w-8 h-8" />
             </div>
             <CardTitle className="font-headline text-3xl">
-              ตารางข้อมูลจาก Notion (ตัวอย่าง)
+              ตารางสต็อกสินค้า (จาก Notion)
             </CardTitle>
             <CardDescription>
-              นี่คือตัวอย่างหน้าจอสำหรับแสดงข้อมูลสต็อกสินค้าที่ดึงมาจาก Notion
+              ข้อมูลสต็อกสินค้าที่ดึงมาจากฐานข้อมูลใน Notion ของคุณแบบ Real-time
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <Alert variant="default" className="bg-yellow-100/80 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-800">
-              <Info className="h-4 w-4 text-yellow-800 dark:text-yellow-300" />
-              <AlertTitle className="text-yellow-800 dark:text-yellow-300">ข้อมูลจำลอง</AlertTitle>
-              <AlertDescription className="text-yellow-700 dark:text-yellow-400">
-                ข้อมูลที่แสดงในตารางนี้เป็นเพียงข้อมูลตัวอย่าง ไม่ได้ดึงมาจาก Notion API โดยตรง เนื่องด้วยข้อจำกัดด้านความปลอดภัยในการใช้ API Key ในฝั่ง Client-side
-              </AlertDescription>
-            </Alert>
-            
-            <div className="overflow-x-auto rounded-lg border">
-                <UiTable>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead>ชื่อสินค้า</TableHead>
-                    <TableHead className="text-center">สถานะ</TableHead>
-                    <TableHead className="text-right">จำนวนในสต็อก</TableHead>
-                    <TableHead className="text-right">ราคา (บาท)</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {mockStockData.map((item) => (
-                    <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-center">
-                            <Badge variant={getStatusVariant(item.status) as any}>{item.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{item.stock}</TableCell>
-                        <TableCell className="text-right font-bold">{item.price.toFixed(2)}</TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </UiTable>
-            </div>
+            {renderContent()}
 
             <div className="text-center pt-4">
                <Button asChild>

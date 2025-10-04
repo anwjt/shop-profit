@@ -253,7 +253,7 @@ export default function PriceCalculator() {
 
   return (
     <div className="w-full max-w-4xl space-y-4">
-      <Card className="w-full shadow-lg">
+      <Card className="w-full shadow-lg relative overflow-hidden">
         <div className="absolute top-4 right-4 flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
                 <Link href="/notion-table">
@@ -331,9 +331,9 @@ export default function PriceCalculator() {
                             if (!platformCategory) return null;
                             let feeLabel = `~${platformCategory.fee.toFixed(2)}%`;
                             if (selectedPlatform === 'shopee') feeLabel = `${feeLabel} (รวม VAT และค่าธุรกรรม)`;
-                            else if (selectedPlatform === 'lazada') feeLabel = `~${platformCategory.fee.toFixed(2)}% + 3.21% (รวม VAT)`;
-                            else if (platformCategory.orderFee) feeLabel = `~${platformCategory.fee.toFixed(2)}% + ${platformCategory.orderFee.toFixed(2)}%`
-                            return (<SelectItem key={cat} value={cat}>{platformCategory.name} (ค่าธรรมเนียม {feeLabel})</SelectItem>)
+                            else if (selectedPlatform === 'lazada') feeLabel = `~${(platformCategory.fee + (platformCategory.paymentFee || 0)).toFixed(2)}%`;
+                            else if (platformCategory.orderFee) feeLabel = `~${(platformCategory.fee + platformCategory.orderFee).toFixed(2)}%`
+                            return (<SelectItem key={cat} value={cat}>{platformCategory.name}</SelectItem>)
                           })}
                         </SelectContent>
                       </Select>
@@ -388,7 +388,7 @@ export default function PriceCalculator() {
                   <FormField control={form.control} name="affiliateCommission" render={({ field }) => (<FormItem><FormLabel>7. ค่าคอม Affiliate (%)</FormLabel><div className="relative"><Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย</FormDescription><FormMessage /></FormItem>)} />
               </div>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <Button type="button" variant="outline" className="w-full" onClick={handleClear} disabled={!result && !isLoading}>
+                <Button type="button" variant="outline" className="w-full" onClick={handleClear} disabled={!form.formState.isDirty && !result}>
                     <RotateCcw className="mr-2 h-4 w-4" />
                     ล้างข้อมูล
                 </Button>
@@ -401,40 +401,71 @@ export default function PriceCalculator() {
         </CardContent>
       </Card>
 
-      {(isLoading || result) && (
+      {isLoading && (
         <Card className="mt-8 w-full shadow-lg">
           <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {isLoading && !result ? (
-              <div className="space-y-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-8 w-3/4 mx-auto" /><Skeleton className="h-8 w-3/4 mx-auto" /><Skeleton className="h-8 w-3/4 mx-auto" /></div>
-            ) : (
-              result && (
-                <>
-                  <div className="text-center p-6 bg-muted rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)</p>
-                    <p className="text-5xl font-bold text-primary tracking-tight mt-1">
-                        ≈ ฿{getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        (คำนวณจริง: ฿{formatPrice(result.sellingPrice)})
-                    </p>
-                  </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม</p><p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(result.platformFeeAmount)}</p><div className="text-xs text-muted-foreground mt-2 space-y-1 text-center"><p>ค่าคอมมิชชั่น: {result.commissionPercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.commissionAmount.toFixed(2)}</p>{result.orderFeeAmount > 0 && (<p>ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}</p>)}{result.paymentFeeAmount > 0 && (<p>ค่าธรรมเนียมการชำระเงิน: {result.paymentFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.paymentFeeAmount.toFixed(2)}</p>)}</div></div>
-                     <div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Wallet />กำไรที่จะได้รับ (โดยประมาณ)</p><p className="text-2xl font-semibold text-green-600 mt-1 text-center">฿{formatPrice(result.profit)}</p></div>
-                  </div>
-                  {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{result.otherCosts > 0 && (<div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">฿{result.otherCosts.toFixed(2)}</p></div>)}{result.affiliateCommissionAmount > 0 && (<div className={`p-4 bg-muted rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">฿{formatPrice(result.affiliateCommissionAmount)}</p></div>)}</div>)}
-                  <Alert variant="default" className="mt-4"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคาที่คำนวณได้เป็นเพียงการประมาณการจากข้อมูลพื้นฐาน และยังไม่รวมค่าใช้จ่ายหรือส่วนลดที่อาจเกิดขึ้นจากแคมเปญส่งเสริมการขายต่างๆ (เช่น ส่วนลดในเทศกาล, คูปองส่วนลดจากแพลตฟอร์ม) หรือค่าขนส่งพิเศษ โปรดตรวจสอบรายละเอียดของแคมเปญและค่าธรรมเนียมอื่นๆ เพิ่มเติมเพื่อให้ได้ราคาที่แม่นยำที่สุด</AlertDescription></Alert>
-                </>
-              )
-            )}
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {result && result.platform === 'shopee' && (<Card className="mt-8 w-full shadow-lg"><CardHeader><CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2"><Sparkles className="h-6 w-6 text-yellow-500" />ราคาแนะนำสำหรับช่องทางชำระเงินเพิ่มเติม (Shopee)</CardTitle><CardDescription className="text-center">ราคาโดยประมาณเมื่อลูกค้าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)</CardDescription></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="text-center p-6 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต (ผ่อนชำระ)</p><p className="text-4xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeCreditCardPrice).toLocaleString('en-US')}</p><p className="text-xs text-muted-foreground mt-1">(คำนวณจริง: ฿{formatPrice(result.shopeeCreditCardPrice)})</p></div><div className="text-center p-6 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p><p className="text-4xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeSPayLaterPrice).toLocaleString('en-US')}</p><p className="text-xs text-muted-foreground mt-1">(คำนวณจริง: ฿{formatPrice(result.shopeeSPayLaterPrice)})</p></div><div className="md:col-span-2"><Alert variant="default" className="mt-4 text-xs"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคาที่แสดงเป็นเพียง **การประมาณการ** โดยใช้อัตราค่าธรรมเนียมสูงสุด และยัง **ไม่รวมค่าขนส่ง** หรือ **ส่วนลดที่ Shopee รับผิดชอบ** ซึ่งอาจส่งผลให้ราคาจริงมีการเปลี่ยนแปลงได้</AlertDescription></Alert></div></CardContent></Card>)}
+      {result && !isLoading && (
+        <>
+          <Card className="w-full shadow-lg">
+            <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center p-6 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)</p>
+                <p className="text-5xl font-bold text-primary tracking-tight mt-1">
+                    ≈ ฿{getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                    (คำนวณจริง: ฿{formatPrice(result.sellingPrice)})
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม</p><p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(result.platformFeeAmount)}</p><div className="text-xs text-muted-foreground mt-2 space-y-1 text-center"><p>ค่าคอมมิชชั่น: {result.commissionPercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.commissionAmount.toFixed(2)}</p>{result.orderFeeAmount > 0 && (<p>ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}</p>)}{result.paymentFeeAmount > 0 && (<p>ค่าธรรมเนียมการชำระเงิน: {result.paymentFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.paymentFeeAmount.toFixed(2)}</p>)}</div></div>
+                <div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Wallet />กำไรที่จะได้รับ (โดยประมาณ)</p><p className="text-2xl font-semibold text-green-600 mt-1 text-center">฿{formatPrice(result.profit)}</p></div>
+              </div>
+              {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{result.otherCosts > 0 && (<div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">฿{result.otherCosts.toFixed(2)}</p></div>)}{result.affiliateCommissionAmount > 0 && (<div className={`p-4 bg-muted rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">฿{formatPrice(result.affiliateCommissionAmount)}</p></div>)}</div>)}
+              <Alert variant="default" className="mt-4"><Info className="h-4 w-4" /><AlertTitle>ข้อจำกัดความรับผิดชอบ</AlertTitle><AlertDescription>ราคาที่คำนวณได้เป็นเพียงการประมาณการจากข้อมูลพื้นฐาน และยังไม่รวมค่าใช้จ่ายหรือส่วนลดที่อาจเกิดขึ้นจากแคมเปญส่งเสริมการขายต่างๆ (เช่น ส่วนลดในเทศกาล, คูปองส่วนลดจากแพลตฟอร์ม) หรือค่าขนส่งพิเศษ โปรดตรวจสอบรายละเอียดของแคมเปญและค่าธรรมเนียมอื่นๆ เพิ่มเติมเพื่อให้ได้ราคาที่แม่นยำที่สุด</AlertDescription></Alert>
+            </CardContent>
+          </Card>
+
+          {result.platform === 'shopee' && (
+            <Card className="w-full shadow-lg">
+              <CardHeader>
+                <CardTitle className="font-headline text-2xl text-center flex items-center justify-center gap-2">
+                  <Sparkles className="h-6 w-6 text-yellow-500" />ราคาแนะนำสำหรับช่องทางชำระเงินเพิ่มเติม (Shopee)
+                </CardTitle>
+                <CardDescription className="text-center">ราคาโดยประมาณเมื่อลูกค้าเลือกผ่อนชำระ (คำนวณจากอัตราสูงสุด)</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="text-center p-6 bg-muted rounded-lg">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต (ผ่อนชำระ)</p>
+                  <p className="text-4xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeCreditCardPrice).toLocaleString('en-US')}</p>
+                  <p className="text-xs text-muted-foreground mt-1">(คำนวณจริง: ฿{formatPrice(result.shopeeCreditCardPrice)})</p>
+                </div>
+                <div className="text-center p-6 bg-muted rounded-lg">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p>
+                  <p className="text-4xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeSPayLaterPrice).toLocaleString('en-US')}</p>
+                  <p className="text-xs text-muted-foreground mt-1">(คำนวณจริง: ฿{formatPrice(result.shopeeSPayLaterPrice)})</p>
+                </div>
+                <div className="md:col-span-2">
+                  <Alert variant="default" className="mt-4 text-xs"><Info className="h-4 w-4" /><AlertTitle>ข้อควรทราบ</AlertTitle><AlertDescription>ราคาที่แสดงเป็นเพียง **การประมาณการ** โดยใช้อัตราค่าธรรมเนียมสูงสุด และยัง **ไม่รวมค่าขนส่ง** หรือ **ส่วนลดที่ Shopee รับผิดชอบ** ซึ่งอาจส่งผลให้ราคาจริงมีการเปลี่ยนแปลงได้</AlertDescription></Alert>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
     </div>
   );
 }
-
-    
