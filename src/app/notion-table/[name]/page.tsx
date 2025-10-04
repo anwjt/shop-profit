@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -263,10 +263,11 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
     );
 };
 
-export default function ProductDetailPage({ params }: { params: { name: string } }) {
+export default function ProductDetailPage() {
   const router = useRouter();
-  const productName = decodeURIComponent(params.name);
-  const [allData, setAllData] = useState<StockItem[]>([]);
+  const params = useParams();
+  const productName = useMemo(() => decodeURIComponent(params.name as string), [params.name]);
+  const [allData, setAllData] useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -346,8 +347,15 @@ export default function ProductDetailPage({ params }: { params: { name: string }
         name: productData[0].name,
         price: productData[0].price,
       });
+    } else {
+        // If product data is not loaded yet, set form default from productName
+        form.setValue('name', productName);
+        editForm.reset({
+            name: productName,
+            price: 0,
+        });
     }
-  }, [productData, form, editForm]);
+  }, [productData, productName, form, editForm]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -886,8 +894,7 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                             </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-price" className="text-right">ต้นทุน</Label>
-                            <div className="col-span-3">
+                            <Label htmlFor="edit-price" className="text-right">ต้นทุน</Label>                            <div className="col-span-3">
                                <Input id="edit-price" type="number" step="0.01" {...editForm.register('price')} className={editForm.formState.errors.price ? 'border-destructive' : ''}/>
                                {editForm.formState.errors.price && <p className="text-xs text-destructive mt-1">{editForm.formState.errors.price.message}</p>}
                             </div>
@@ -945,3 +952,5 @@ export default function ProductDetailPage({ params }: { params: { name: string }
     </>
   );
 }
+
+    
