@@ -8,7 +8,7 @@ import type { StockItem } from '@/app/notion-table/page';
 // These are case-sensitive.
 const PROPERTY_NAMES = {
   name: 'Name',
-  stock: 'Stock',
+  sku: 'SKU',
   price: 'Price',
   status: 'Status',
   platform: 'Platform',
@@ -30,7 +30,7 @@ function pageToStockItem(page: any): StockItem | null {
     const { properties } = page;
     
     const name = properties[PROPERTY_NAMES.name]?.title[0]?.plain_text ?? '';
-    const stock = properties[PROPERTY_NAMES.stock]?.number ?? 0;
+    const sku = properties[PROPERTY_NAMES.sku]?.rich_text[0]?.plain_text ?? '';
     const price = properties[PROPERTY_NAMES.price]?.number ?? 0;
     const status = properties[PROPERTY_NAMES.status]?.select?.name ?? 'รอขาย';
     const platform = properties[PROPERTY_NAMES.platform]?.select?.name ?? '';
@@ -43,7 +43,7 @@ function pageToStockItem(page: any): StockItem | null {
     return {
       id: page.id,
       name,
-      stock,
+      sku,
       price,
       status: validStatus,
       platform,
@@ -88,13 +88,13 @@ export async function GET() {
 // POST: Create a new page
 export async function POST(req: NextRequest) {
   try {
-    const { name, stock, price, status, platform, category } = await req.json();
+    const { name, sku, price, status, platform, category } = await req.json();
 
     const response = await notion.pages.create({
       parent: { database_id: databaseId },
       properties: {
         [PROPERTY_NAMES.name]: { title: [{ text: { content: name } }] },
-        [PROPERTY_NAMES.stock]: { number: stock },
+        [PROPERTY_NAMES.sku]: { rich_text: [{ text: { content: sku } }] },
         [PROPERTY_NAMES.price]: { number: price },
         [PROPERTY_NAMES.status]: { select: { name: status } },
         [PROPERTY_NAMES.platform]: { select: { name: platform } },
@@ -129,7 +129,7 @@ export async function PATCH(req: NextRequest) {
   
       const properties: any = {};
       if (data.name) properties[PROPERTY_NAMES.name] = { title: [{ text: { content: data.name } }] };
-      if (data.stock !== undefined) properties[PROPERTY_NAMES.stock] = { number: data.stock };
+      if (data.sku !== undefined) properties[PROPERTY_NAMES.sku] = { rich_text: [{ text: { content: data.sku } }] };
       if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
       if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
       if (data.platform) properties[PROPERTY_NAMES.platform] = { select: { name: data.platform } };

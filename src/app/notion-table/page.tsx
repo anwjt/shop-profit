@@ -67,7 +67,7 @@ import { PLATFORM_FEES, calculatePrice, type CalculationResult, getPlatformCateg
 export type StockItem = {
   id: string;
   name:string;
-  stock: number;
+  sku: string;
   price: number;
   status: 'ขายแล้ว' | 'รอขาย';
   platform: string;
@@ -76,7 +76,7 @@ export type StockItem = {
 
 const stockItemSchema = z.object({
     name: z.string().min(1, 'ชื่อสินค้าห้ามว่าง'),
-    stock: z.coerce.number().min(0, 'สต็อกต้องเป็นตัวเลขไม่ติดลบ'),
+    sku: z.string().min(1, 'SKU ห้ามว่าง'),
     price: z.coerce.number().min(0, 'ราคาต้องเป็นตัวเลขไม่ติดลบ'),
     status: z.enum(['ขายแล้ว', 'รอขาย']),
     platform: z.string().min(1, "กรุณาเลือกแพลตฟอร์ม"),
@@ -230,14 +230,14 @@ export default function NotionTablePage() {
     if (item) {
         reset({
             name: item.name,
-            stock: item.stock,
+            sku: item.sku,
             price: item.price,
             status: item.status,
             platform: item.platform,
             category: item.category,
         });
     } else {
-        reset({ name: '', stock: 0, price: 0, status: 'รอขาย', platform: 'Shopee', category: '' });
+        reset({ name: '', sku: '', price: 0, status: 'รอขาย', platform: 'Shopee', category: '' });
     }
     setIsFormOpen(true);
   };
@@ -375,8 +375,8 @@ export default function NotionTablePage() {
             <TableRow>
               <TableHead>ชื่อสินค้า</TableHead>
               <TableHead>แพลตฟอร์ม</TableHead>
+              <TableHead>SKU</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
-              <TableHead className="text-right">สต็อก</TableHead>
               <TableHead className="text-right">ต้นทุน (บาท)</TableHead>
               <TableHead className="text-center">การขาย</TableHead>
               <TableHead className="text-right w-[50px]"></TableHead>
@@ -392,10 +392,10 @@ export default function NotionTablePage() {
                         {item.platform}
                     </Button>
                 </TableCell>
+                <TableCell>{item.sku}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right">{item.stock}</TableCell>
                 <TableCell className="text-right font-bold">{item.price.toFixed(2)}</TableCell>
                 <TableCell className="text-center">
                     {item.status === 'รอขาย' ? (
@@ -549,10 +549,10 @@ export default function NotionTablePage() {
                         </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="stock" className="text-right">สต็อก</Label>
+                        <Label htmlFor="sku" className="text-right">SKU</Label>
                         <div className="col-span-3">
-                            <Input id="stock" type="number" {...register('stock')} className={errors.stock ? 'border-destructive' : ''}/>
-                            {errors.stock && <p className="text-xs text-destructive mt-1">{errors.stock.message}</p>}
+                            <Input id="sku" {...register('sku')} className={errors.sku ? 'border-destructive' : ''}/>
+                            {errors.sku && <p className="text-xs text-destructive mt-1">{errors.sku.message}</p>}
                         </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
