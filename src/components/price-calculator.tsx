@@ -186,7 +186,7 @@ export default function PriceCalculator({ isStandalone = true }: PriceCalculator
                         <SelectContent>
                           <SelectItem value="shopee">Shopee</SelectItem>
                           <SelectItem value="lazada">Lazada</SelectItem>
-                          <SelectItem value="tiktok">TikTok Shop</SelectItem>
+                          <SelectItem value="tiktok shop">TikTok Shop</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -13,7 +13,7 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
       'fmcg': { name: 'สินค้าอุปโภคบริโภค', fee: 8.0 * 1.07, paymentFee: 3.0 * 1.07 },
       'digital': { name: 'บัตรกำนัลดิจิทัล', fee: 7.0 * 1.07, paymentFee: 3.0 * 1.07 },
     },
-    tiktok: {
+    'tiktok shop': {
       'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42, orderFee: 3.21 },
       'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 5.35, orderFee: 3.21 },
       'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 5.35, orderFee: 3.21 },
@@ -50,8 +50,8 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
     paymentFeePercent: number;
     priceForFeeCalculation: number;
     discount: number;
-    shopeeCreditCardPrice?: number;
-    shopeeSPayLaterPrice?: number;
+    shopeeCreditCardPrice: number;
+    shopeeSPayLaterPrice: number;
     totalCost: number;
   };
   
@@ -103,7 +103,10 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
   
     const finalProfit = sellingPrice - discount - totalCost - totalPlatformFee - affiliateCommissionAmount;
   
-    let shopeePrices: { shopeeCreditCardPrice?: number, shopeeSPayLaterPrice?: number } = {};
+    let shopeePrices: { shopeeCreditCardPrice: number, shopeeSPayLaterPrice: number } = {
+        shopeeCreditCardPrice: 0,
+        shopeeSPayLaterPrice: 0,
+    };
     if (platform === 'shopee') {
       const baseCommission = PLATFORM_FEES[platform][category].fee - (3*1.07);
       const baseFeeRate = (baseCommission / 100) + affiliateRate;
@@ -161,3 +164,4 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
         return roundedPrice - lastDigit + 9;
     }
   }
+

@@ -100,7 +100,7 @@ const getStatusVariant = (status: StockItem['status']) => {
 
 const platformCategories = getPlatformCategories();
 
-const ResultDisplay = ({ result, title }: { result: CalculationResult; title: string }) => (
+const ResultDisplay = ({ result, title }: { result: CalculationResult | null; title: string }) => (
     <DialogContent className="max-w-2xl">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
@@ -110,50 +110,62 @@ const ResultDisplay = ({ result, title }: { result: CalculationResult; title: st
           ผลการคำนวณราคาขายสำหรับสินค้าชิ้นนี้บนแพลตฟอร์มที่เลือก (กำไร 20%, ไม่มีส่วนลด/ค่าใช้จ่ายอื่น)
         </DialogDescription>
       </DialogHeader>
-      <div className="py-4 max-h-[70vh] overflow-y-auto pr-4 space-y-4">
-        <div className="text-center p-6 bg-muted rounded-lg">
-          <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย</p>
-          <p className="text-5xl font-bold text-primary tracking-tight mt-1">
-            ≈ ฿{getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            (คำนวณจริง: ฿{formatPrice(result.sellingPrice)})
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-muted rounded-lg">
-            <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
-              <TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม
+      {result ? (
+        <div className="py-4 max-h-[70vh] overflow-y-auto pr-4 space-y-4">
+            <div className="text-center p-6 bg-muted rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย</p>
+            <p className="text-5xl font-bold text-primary tracking-tight mt-1">
+                ≈ ฿{getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
             </p>
-            <p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(result.platformFeeAmount)}</p>
-          </div>
-          <div className="p-4 bg-muted rounded-lg">
-            <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2">
-              <Wallet />กำไรที่จะได้รับ
+            <p className="text-xs text-muted-foreground mt-1">
+                (คำนวณจริง: ฿{formatPrice(result.sellingPrice)})
             </p>
-            <p className="text-2xl font-semibold text-green-600 mt-1 text-center">฿{formatPrice(result.profit)}</p>
-          </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
+                <TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม
+                </p>
+                <p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(result.platformFeeAmount)}</p>
+            </div>
+            <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2">
+                <Wallet />กำไรที่จะได้รับ
+                </p>
+                <p className="text-2xl font-semibold text-green-600 mt-1 text-center">฿{formatPrice(result.profit)}</p>
+            </div>
+            </div>
+            {result.platform === 'shopee' && (
+            <Card className="w-full">
+                <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-yellow-500" />ราคาแนะนำ (ผ่อนชำระ)
+                </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                <div className="text-center p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต</p>
+                    <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeCreditCardPrice).toLocaleString('en-US')}</p>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p>
+                    <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeSPayLaterPrice).toLocaleString('en-US')}</p>
+                </div>
+                </CardContent>
+            </Card>
+            )}
         </div>
-        {result.platform === 'shopee' && (
-          <Card className="w-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-yellow-500" />ราคาแนะนำ (ผ่อนชำระ)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต</p>
-                <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeCreditCardPrice).toLocaleString('en-US')}</p>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p>
-                <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeSPayLaterPrice).toLocaleString('en-US')}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      ) : (
+        <div className="py-4">
+            <Alert variant="destructive">
+                <Info className="h-4 w-4" />
+                <AlertTitle>ไม่สามารถคำนวณได้</AlertTitle>
+                <AlertDescription>
+                    โปรดตรวจสอบว่าสินค้ามีหมวดหมู่ที่ถูกต้องสำหรับแพลตฟอร์มนี้
+                </AlertDescription>
+            </Alert>
+        </div>
+      )}
     </DialogContent>
   );
 
@@ -178,9 +190,9 @@ export default function NotionTablePage() {
   const selectedPlatformForForm = watch('platform');
 
   const calculationResult = useMemo(() => {
-    if (!resultItem) return null;
+    if (!resultItem || !resultItem.platform || !resultItem.category) return null;
     return calculatePrice({
-      platform: resultItem.platform.toLowerCase().replace(' ', ''),
+      platform: resultItem.platform.toLowerCase(),
       category: resultItem.category,
       cost: resultItem.price,
       profitMargin: 20, // Default profit margin for quick calculation
@@ -190,6 +202,12 @@ export default function NotionTablePage() {
   useEffect(() => {
     fetchData();
   }, []);
+  
+  useEffect(() => {
+    if(selectedPlatformForForm) {
+        setValue('category', '');
+    }
+  }, [selectedPlatformForForm, setValue]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -221,7 +239,7 @@ export default function NotionTablePage() {
             category: item.category,
         });
     } else {
-        reset({ name: '', stock: 0, price: 0, status: 'In Stock', platform: 'Shopee', category: 'other' });
+        reset({ name: '', stock: 0, price: 0, status: 'In Stock', platform: 'Shopee', category: '' });
     }
     setIsFormOpen(true);
   };
@@ -351,7 +369,7 @@ export default function NotionTablePage() {
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => handleOpenResult(item)}>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenResult(item)} disabled={!item.platform || !item.category}>
                         <Calculator className="mr-2 h-3 w-3" />
                         {item.platform}
                     </Button>
@@ -481,12 +499,12 @@ export default function NotionTablePage() {
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
                         <div className="col-span-3">
-                            <Select onValueChange={(value) => setValue('category', value)} defaultValue={editingItem?.category || 'other'}>
+                            <Select onValueChange={(value) => setValue('category', value)} value={watch('category')} disabled={!selectedPlatformForForm}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="เลือกหมวดหมู่" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {platformCategories[selectedPlatformForForm.toLowerCase().replace(' ', '')]?.map(cat => (
+                                    {platformCategories[selectedPlatformForForm.toLowerCase()]?.map(cat => (
                                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -536,7 +554,7 @@ export default function NotionTablePage() {
       
       {/* Result Dialog */}
       <Dialog open={!!resultItem} onOpenChange={(isOpen) => !isOpen && setResultItem(null)}>
-        {calculationResult && (
+        {resultItem && (
             <ResultDisplay result={calculationResult} title={`ผลคำนวณสำหรับ "${resultItem?.name}"`} />
         )}
       </Dialog>
