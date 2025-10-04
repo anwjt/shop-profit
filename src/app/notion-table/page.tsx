@@ -1,11 +1,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import Image from 'next/image';
 import {
   Card,
   CardContent,
@@ -23,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -63,25 +62,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import PriceCalculator from '@/components/price-calculator';
-
-
-const PlatformIcon = ({ platform }: { platform: string }) => {
-    switch (platform) {
-      case 'Shopee':
-        return <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/960px-Shopee.svg.png" alt="Shopee" width={24} height={24} className="min-w-[24px]" />;
-      case 'TikTok Shop':
-        return <Image src="https://upload.wikimedia.org/wikipedia/en/thumb/a/a9/TikTok_logo.svg/500px-TikTok_logo.svg.png" alt="TikTok Shop" width={24} height={24} className="min-w-[24px]" />;
-      case 'Lazada':
-        return (
-            <div className="w-6 h-6 flex items-center justify-center bg-blue-600 rounded-sm min-w-[24px]">
-                <span className="font-bold text-white text-lg italic">L</span>
-            </div>
-        );
-      default:
-        return null;
-    }
-};
+import { PLATFORM_FEES, calculatePrice, type CalculationResult, getPlatformCategories, formatPrice, getPsychologicalPrice } from '@/lib/price-calculation';
 
 export type StockItem = {
   id: string;
@@ -90,6 +71,7 @@ export type StockItem = {
   price: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
   platform: string;
+  category: string;
 };
 
 const stockItemSchema = z.object({
@@ -98,6 +80,7 @@ const stockItemSchema = z.object({
     price: z.coerce.number().min(0, 'ราคาต้องเป็นตัวเลขไม่ติดลบ'),
     status: z.enum(['In Stock', 'Low Stock', 'Out of Stock']),
     platform: z.string().min(1, "กรุณาเลือกแพลตฟอร์ม"),
+    category: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
 });
 
 type StockItemFormData = z.infer<typeof stockItemSchema>;
@@ -115,6 +98,64 @@ const getStatusVariant = (status: StockItem['status']) => {
   }
 };
 
+const platformCategories = getPlatformCategories();
+
+const ResultDisplay = ({ result, title }: { result: CalculationResult; title: string }) => (
+    <DialogContent className="max-w-2xl">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Calculator /> {title}
+        </DialogTitle>
+        <DialogDescription>
+          ผลการคำนวณราคาขายสำหรับสินค้าชิ้นนี้บนแพลตฟอร์มที่เลือก (กำไร 20%, ไม่มีส่วนลด/ค่าใช้จ่ายอื่น)
+        </DialogDescription>
+      </DialogHeader>
+      <div className="py-4 max-h-[70vh] overflow-y-auto pr-4 space-y-4">
+        <div className="text-center p-6 bg-muted rounded-lg">
+          <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย</p>
+          <p className="text-5xl font-bold text-primary tracking-tight mt-1">
+            ≈ ฿{getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            (คำนวณจริง: ฿{formatPrice(result.sellingPrice)})
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
+              <TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม
+            </p>
+            <p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(result.platformFeeAmount)}</p>
+          </div>
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2">
+              <Wallet />กำไรที่จะได้รับ
+            </p>
+            <p className="text-2xl font-semibold text-green-600 mt-1 text-center">฿{formatPrice(result.profit)}</p>
+          </div>
+        </div>
+        {result.platform === 'shopee' && (
+          <Card className="w-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-yellow-500" />ราคาแนะนำ (ผ่อนชำระ)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต</p>
+                <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeCreditCardPrice).toLocaleString('en-US')}</p>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p>
+                <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeSPayLaterPrice).toLocaleString('en-US')}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </DialogContent>
+  );
 
 export default function NotionTablePage() {
   const [data, setData] = useState<StockItem[]>([]);
@@ -122,17 +163,29 @@ export default function NotionTablePage() {
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
-  const [isCalcOpen, setIsCalcOpen] = useState(false);
-  const [calcItem, setCalcItem] = useState<StockItem | null>(null);
+  const [resultItem, setResultItem] = useState<StockItem | null>(null);
   const { toast } = useToast();
 
-  const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<StockItemFormData>({
+  const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm<StockItemFormData>({
     resolver: zodResolver(stockItemSchema),
     defaultValues: {
         status: 'In Stock',
         platform: 'Shopee',
+        category: 'other',
     }
   });
+
+  const selectedPlatformForForm = watch('platform');
+
+  const calculationResult = useMemo(() => {
+    if (!resultItem) return null;
+    return calculatePrice({
+      platform: resultItem.platform.toLowerCase().replace(' ', ''),
+      category: resultItem.category,
+      cost: resultItem.price,
+      profitMargin: 20, // Default profit margin for quick calculation
+    });
+  }, [resultItem]);
 
   useEffect(() => {
     fetchData();
@@ -165,16 +218,16 @@ export default function NotionTablePage() {
             price: item.price,
             status: item.status,
             platform: item.platform,
+            category: item.category,
         });
     } else {
-        reset({ name: '', stock: 0, price: 0, status: 'In Stock', platform: 'Shopee' });
+        reset({ name: '', stock: 0, price: 0, status: 'In Stock', platform: 'Shopee', category: 'other' });
     }
     setIsFormOpen(true);
   };
 
-  const handleOpenCalc = (item: StockItem) => {
-    setCalcItem(item);
-    setIsCalcOpen(true);
+  const handleOpenResult = (item: StockItem) => {
+    setResultItem(item);
   };
 
   const handleFormSubmit = async (formData: StockItemFormData) => {
@@ -237,7 +290,7 @@ export default function NotionTablePage() {
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
              <div key={i} className="flex items-center space-x-4 p-4">
-                <Skeleton className="h-6 w-6" />
+                <div className="w-28"><Skeleton className="h-6 w-full" /></div>
                 <div className="space-y-2 flex-grow">
                     <Skeleton className="h-4 w-3/4" />
                 </div>
@@ -260,7 +313,8 @@ export default function NotionTablePage() {
             <ul className="list-disc list-inside mt-2 text-xs">
               <li>ตรวจสอบว่า `NOTION_API_KEY` และ `NOTION_DATABASE_ID` ในไฟล์ `.env.local` ถูกต้อง</li>
               <li>ตรวจสอบว่า Integration ของคุณได้ถูกเชิญให้เข้าถึง Database ใน Notion และได้รับสิทธิ์ในการ "Read", "Update", และ "Insert"</li>
-               <li><span className="font-mono bg-destructive-foreground/20 p-1 rounded">Error: {error}</span></li>
+              <li>ตรวจสอบว่าชื่อและประเภทของคอลัมน์ (Property) ใน Notion ตรงกับที่กำหนดใน `src/app/api/notion/route.ts`</li>
+              <li><span className="font-mono bg-destructive-foreground/20 p-1 rounded">Error: {error}</span></li>
             </ul>
           </AlertDescription>
         </Alert>
@@ -284,23 +338,24 @@ export default function NotionTablePage() {
         <UiTable>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]">แพลตฟอร์ม</TableHead>
               <TableHead>ชื่อสินค้า</TableHead>
+              <TableHead>แพลตฟอร์ม</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
-              <TableHead className="text-right">จำนวนในสต็อก</TableHead>
-              <TableHead className="text-right">ราคา (บาท)</TableHead>
+              <TableHead className="text-right">สต็อก</TableHead>
+              <TableHead className="text-right">ต้นทุน (บาท)</TableHead>
               <TableHead className="text-right w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((item) => (
               <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell>
-                    <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleOpenCalc(item)}>
-                        <PlatformIcon platform={item.platform}/>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenResult(item)}>
+                        <Calculator className="mr-2 h-3 w-3" />
+                        {item.platform}
                     </Button>
                 </TableCell>
-                <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                 </TableCell>
@@ -424,7 +479,23 @@ export default function NotionTablePage() {
                         </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="price" className="text-right">ราคา</Label>
+                        <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
+                        <div className="col-span-3">
+                            <Select onValueChange={(value) => setValue('category', value)} defaultValue={editingItem?.category || 'other'}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="เลือกหมวดหมู่" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {platformCategories[selectedPlatformForForm.toLowerCase().replace(' ', '')]?.map(cat => (
+                                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                             {errors.category && <p className="text-xs text-destructive mt-1">{errors.category.message}</p>}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="price" className="text-right">ต้นทุน</Label>
                         <div className="col-span-3">
                            <Input id="price" type="number" step="0.01" {...register('price')} className={errors.price ? 'border-destructive' : ''}/>
                            {errors.price && <p className="text-xs text-destructive mt-1">{errors.price.message}</p>}
@@ -463,22 +534,12 @@ export default function NotionTablePage() {
         </DialogContent>
       </Dialog>
       
-      {/* Calculator Dialog */}
-      <Dialog open={isCalcOpen} onOpenChange={setIsCalcOpen}>
-        <DialogContent className="max-w-4xl">
-            <DialogHeader>
-                <DialogTitle className="flex items-center gap-2"><Calculator /> คำนวณราคาขายสำหรับ "{calcItem?.name}"</DialogTitle>
-                <DialogDescription>
-                    คำนวณราคาขายสำหรับสินค้าชิ้นนี้โดยเฉพาะ ราคาต้นทุนจะถูกดึงมาจากข้อมูลในตาราง
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 max-h-[70vh] overflow-y-auto pr-4">
-               {calcItem && <PriceCalculator initialCost={calcItem.price} />}
-            </div>
-        </DialogContent>
+      {/* Result Dialog */}
+      <Dialog open={!!resultItem} onOpenChange={(isOpen) => !isOpen && setResultItem(null)}>
+        {calculationResult && (
+            <ResultDisplay result={calculationResult} title={`ผลคำนวณสำหรับ "${resultItem?.name}"`} />
+        )}
       </Dialog>
     </>
   );
 }
-
-    

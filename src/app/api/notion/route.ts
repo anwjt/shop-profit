@@ -12,6 +12,7 @@ const PROPERTY_NAMES = {
   price: 'Price',
   status: 'Status',
   platform: 'Platform',
+  category: 'Category',
 };
 // ---------------------
 
@@ -33,6 +34,7 @@ function pageToStockItem(page: any): StockItem | null {
     const price = properties[PROPERTY_NAMES.price]?.number ?? 0;
     const status = properties[PROPERTY_NAMES.status]?.select?.name ?? 'Out of Stock';
     const platform = properties[PROPERTY_NAMES.platform]?.select?.name ?? 'Shopee';
+    const category = properties[PROPERTY_NAMES.category]?.select?.name ?? 'other';
 
     const validStatus = ['In Stock', 'Low Stock', 'Out of Stock'].includes(status) 
         ? status as StockItem['status'] 
@@ -45,6 +47,7 @@ function pageToStockItem(page: any): StockItem | null {
       price,
       status: validStatus,
       platform,
+      category,
     };
   } catch (error) {
     console.error(`Failed to process page ${page.id}:`, error);
@@ -85,7 +88,7 @@ export async function GET() {
 // POST: Create a new page
 export async function POST(req: NextRequest) {
   try {
-    const { name, stock, price, status, platform } = await req.json();
+    const { name, stock, price, status, platform, category } = await req.json();
 
     const response = await notion.pages.create({
       parent: { database_id: databaseId },
@@ -95,6 +98,7 @@ export async function POST(req: NextRequest) {
         [PROPERTY_NAMES.price]: { number: price },
         [PROPERTY_NAMES.status]: { select: { name: status } },
         [PROPERTY_NAMES.platform]: { select: { name: platform } },
+        [PROPERTY_NAMES.category]: { select: { name: category } },
       },
     });
 
@@ -129,6 +133,7 @@ export async function PATCH(req: NextRequest) {
       if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
       if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
       if (data.platform) properties[PROPERTY_NAMES.platform] = { select: { name: data.platform } };
+      if (data.category) properties[PROPERTY_NAMES.category] = { select: { name: data.category } };
   
       const response = await notion.pages.update({
         page_id: id,

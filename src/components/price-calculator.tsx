@@ -54,33 +54,8 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { PLATFORM_FEES, calculatePrice, type CalculationResult, formatPrice, getPsychologicalPrice, getPlatformCategories } from '@/lib/price-calculation';
 
-
-const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fee: number, orderFee?: number, paymentFee?: number } } } = {
-  shopee: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 8.56 + (3*1.07) },
-    'fashion': { name: 'สินค้าแฟชั่น', fee: 9.63 + (3*1.07) },
-    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 8.025 + (3*1.07) },
-    'other': { name: 'สินค้าทั่วไป (นอกกลุ่มอิเล็กทรอนิกส์)', fee: 8.56 + (3*1.07) },
-  },
-  lazada: {
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์ (สูงสุด)', fee: 8.0 * 1.07, paymentFee: 3.0 * 1.07 },
-    'general': { name: 'สินค้าทั่วไป (สูงสุด)', fee: 8.0 * 1.07, paymentFee: 3.0 * 1.07 },
-    'fashion': { name: 'สินค้าแฟชั่น (สูงสุด)', fee: 9.0 * 1.07, paymentFee: 3.0 * 1.07 },
-    'fmcg': { name: 'สินค้าอุปโภคบริโภค', fee: 8.0 * 1.07, paymentFee: 3.0 * 1.07 },
-    'digital': { name: 'บัตรกำนัลดิจิทัล', fee: 7.0 * 1.07, paymentFee: 3.0 * 1.07 },
-  },
-  tiktok: {
-    'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42, orderFee: 3.21 },
-    'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 5.35, orderFee: 3.21 },
-    'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 5.35, orderFee: 3.21 },
-  },
-};
-
-const SHOPEE_EXTRA_FEES = {
-  creditCard: 0.06 * 1.07,
-  spayLater: 0.06 * 1.07,
-};
 
 const formSchema = z.object({
   platform: z.string({ required_error: 'กรุณาเลือกแพลตฟอร์ม' }).min(1, 'กรุณาเลือกแพลตฟอร์ม'),
@@ -97,58 +72,22 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export type CalculationResult = {
-  sellingPrice: number;
-  platformFeeAmount: number;
-  profit: number;
-  commissionAmount: number;
-  orderFeeAmount: number;
-  paymentFeeAmount: number;
-  affiliateCommissionAmount: number;
-  otherCosts: number;
-  platform: string;
-  commissionPercent: number;
-  orderFeePercent: number;
-  paymentFeePercent: number;
-  priceForFeeCalculation: number;
-  discount: number;
-  shopeeCreditCardPrice?: number;
-  shopeeSPayLaterPrice?: number;
-  totalCost: number;
-};
+export type { CalculationResult };
 
-const formatPrice = (price: number | undefined) => {
-    if (typeof price !== 'number') return '0.00';
-    return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-
-const getPsychologicalPrice = (price: number | undefined) => {
-    if (typeof price !== 'number' || price <= 0) return 0;
-    const roundedPrice = Math.floor(price);
-    const lastDigit = roundedPrice % 10;
-
-    if (lastDigit < 5) {
-        return roundedPrice - lastDigit;
-    } else {
-        return roundedPrice - lastDigit + 9;
-    }
-}
 
 interface PriceCalculatorProps {
   isStandalone?: boolean;
-  initialCost?: number;
 }
 
-export default function PriceCalculator({ isStandalone = true, initialCost }: PriceCalculatorProps) {
+export default function PriceCalculator({ isStandalone = true }: PriceCalculatorProps) {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       platform: '', 
-      cost: initialCost ?? undefined, 
+      cost: undefined, 
       category: '',
       otherCosts: [], 
       profitMargin: undefined, 
@@ -161,40 +100,24 @@ export default function PriceCalculator({ isStandalone = true, initialCost }: Pr
     control: form.control, name: "otherCosts",
   });
 
-  useEffect(() => {
-    if (initialCost) {
-      form.setValue('cost', initialCost);
-    }
-  }, [initialCost, form]);
-
-
   const selectedPlatform = form.watch('platform');
+  const platformCategories = getPlatformCategories();
 
   useEffect(() => {
     form.setValue('category', '');
-    if (selectedPlatform && PLATFORM_FEES[selectedPlatform]) {
-      const availableCategories = Object.keys(PLATFORM_FEES[selectedPlatform]);
-      setCategories(availableCategories);
-    } else {
-      setCategories([]);
-    }
   }, [selectedPlatform, form]);
 
 
-  const calculateSellingPrice = (baseCost: number, profitAmount: number, discount: number, feeRate: number): number => {
-    const numerator = baseCost + profitAmount - (discount * feeRate) + discount;
-    const denominator = 1 - feeRate;
-    if (denominator <= 0) return 0;
-    return numerator / denominator;
-  }
-  
   const saveToHistory = (resultToSave: CalculationResult) => {
     if (!isStandalone) return;
     try {
       const historyKey = 'calculationHistory';
       const historyDataString = localStorage.getItem(historyKey);
       const today = new Date().toISOString();
-      const newEntry = { ...resultToSave, date: today };
+      // Omitting platform-specific prices for a cleaner history object
+      const { shopeeCreditCardPrice, shopeeSPayLaterPrice, ...rest} = resultToSave;
+      const newEntry = { ...rest, date: today };
+
 
       if (historyDataString) {
         const historyData = JSON.parse(historyDataString);
@@ -218,55 +141,22 @@ export default function PriceCalculator({ isStandalone = true, initialCost }: Pr
     setIsLoading(true);
     setResult(null);
     await new Promise((resolve) => setTimeout(resolve, 300));
-    const { cost, profitMargin = 0, otherCosts = [], platform, category, discount = 0, affiliateCommission = 0 } = values;
-    if (!platform || !category || !PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
-        setIsLoading(false); return;
+    
+    const newResult = calculatePrice(values);
+    
+    if (newResult) {
+      setResult(newResult);
+      saveToHistory(newResult);
     }
-    const platformCategoryData = PLATFORM_FEES[platform][category];
-    const commissionPercent = platformCategoryData.fee;
-    const orderFeePercent = platformCategoryData.orderFee || 0;
-    const paymentFeePercent = platformCategoryData.paymentFee || 0;
-    const totalOtherCosts = otherCosts.reduce((sum, current) => sum + (current.value || 0), 0);
-    const totalCost = cost + totalOtherCosts;
-    const profitAmount = (cost * profitMargin) / 100;
-    let platformFeeRate = (platform === 'lazada')
-        ? (commissionPercent / 100) + (paymentFeePercent / 100)
-        : (commissionPercent / 100) + (orderFeePercent / 100);
-    const affiliateRate = affiliateCommission / 100;
-    const totalFeeRate = platformFeeRate + affiliateRate;
-    const sellingPrice = calculateSellingPrice(totalCost, profitAmount, discount, totalFeeRate);
-    if (sellingPrice === 0) { setIsLoading(false); return; }
-    const priceForFeeCalculation = sellingPrice - discount;
-    const commissionAmount = priceForFeeCalculation * (commissionPercent / 100);
-    const orderFeeAmount = platform === 'tiktok' ? priceForFeeCalculation * (orderFeePercent / 100) : 0;
-    const paymentFeeAmount = platform === 'lazada' ? priceForFeeCalculation * (paymentFeePercent / 100) : 0;
-    let totalPlatformFee = (platform === 'lazada') ? commissionAmount + paymentFeeAmount : commissionAmount + orderFeeAmount;
-    const affiliateCommissionAmount = sellingPrice * affiliateRate;
-    const finalProfit = (sellingPrice - discount) - totalCost - totalPlatformFee - affiliateCommissionAmount;
-    let shopeePrices: { shopeeCreditCardPrice?: number, shopeeSPayLaterPrice?: number } = {};
-    if (platform === 'shopee') {
-      const baseCommission = PLATFORM_FEES[platform][category].fee - (3*1.07);
-      const baseFeeRate = (baseCommission / 100) + affiliateRate;
-      const creditCardFeeRate = baseFeeRate + SHOPEE_EXTRA_FEES.creditCard;
-      const spayLaterFeeRate = baseFeeRate + SHOPEE_EXTRA_FEES.spayLater;
-      shopeePrices.shopeeCreditCardPrice = calculateSellingPrice(totalCost, profitAmount, discount, creditCardFeeRate);
-      shopeePrices.shopeeSPayLaterPrice = calculateSellingPrice(totalCost, profitAmount, discount, spayLaterFeeRate);
-    }
-    const newResult: CalculationResult = {
-      sellingPrice, platformFeeAmount: totalPlatformFee, profit: finalProfit, commissionAmount,
-      orderFeeAmount, paymentFeeAmount, affiliateCommissionAmount, otherCosts: totalOtherCosts,
-      platform, commissionPercent, orderFeePercent, paymentFeePercent, priceForFeeCalculation,
-      discount, totalCost, ...shopeePrices,
-    };
-    setResult(newResult);
-    saveToHistory(newResult);
+    
     setIsLoading(false);
   }
 
   const handleClear = () => {
     form.reset({
-        ...form.getValues(),
-        cost: isStandalone ? undefined : initialCost,
+        platform: '', 
+        cost: undefined, 
+        category: '',
         otherCosts: [],
         profitMargin: undefined,
         discount: undefined,
@@ -317,12 +207,9 @@ export default function PriceCalculator({ isStandalone = true, initialCost }: Pr
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                           {categories.map((cat) => {
-                            if (!selectedPlatform) return null;
-                            const platformCategory = PLATFORM_FEES[selectedPlatform]?.[cat];
-                            if (!platformCategory) return null;
-                            return (<SelectItem key={cat} value={cat}>{platformCategory.name}</SelectItem>)
-                          })}
+                           {platformCategories[selectedPlatform]?.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                           ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -338,7 +225,7 @@ export default function PriceCalculator({ isStandalone = true, initialCost }: Pr
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                         <FormControl>
-                          <Input type="number" placeholder="กรอกราคาต้นทุน" className="pl-8" {...field} disabled={!isStandalone} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                          <Input type="number" placeholder="กรอกราคาต้นทุน" className="pl-8" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
