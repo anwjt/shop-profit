@@ -65,7 +65,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { PLATFORM_FEES, calculatePrice, type CalculationResult, getPlatformCategories, formatPrice, getPsychologicalPrice } from '@/lib/price-calculation';
-import { FormControl, FormItem } from '@/components/ui/form';
+import { Form, FormControl, FormItem } from '@/components/ui/form';
 
 export type StockItem = {
   id: string;
@@ -253,7 +253,7 @@ export default function NotionTablePage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const { toast } = useToast();
 
-  const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm<StockItemFormData>({
+  const form = useForm<StockItemFormData>({
     resolver: zodResolver(stockItemFormSchema),
     defaultValues: {
       name: '',
@@ -262,6 +262,8 @@ export default function NotionTablePage() {
       skus: [{ sku: '', platform: '' }],
     }
   });
+
+  const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = form;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -664,96 +666,98 @@ export default function NotionTablePage() {
       {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-xl">
-            <form onSubmit={handleSubmit(handleFormSubmit)}>
-                <DialogHeader>
-                    <DialogTitle>{editingItem ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</DialogTitle>
-                    <DialogDescription>
-                        {editingItem ? 'แก้ไขรายละเอียดสินค้าด้านล่าง' : 'กรอกรายละเอียดสินค้าใหม่เพื่อเพิ่มในฐานข้อมูล'}
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">ชื่อสินค้า</Label>
-                        <div className="col-span-3">
-                            <Input id="name" {...register('name')} className={errors.name ? 'border-destructive' : ''} />
-                            {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
-                        </div>
-                    </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="price" className="text-right">ต้นทุน</Label>
-                        <div className="col-span-3">
-                           <Input id="price" type="number" step="0.01" {...register('price')} className={errors.price ? 'border-destructive' : ''}/>
-                           {errors.price && <p className="text-xs text-destructive mt-1">{errors.price.message}</p>}
-                        </div>
-                    </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
-                        <div className="col-span-3">
-                            <Select onValueChange={(value) => setValue('category', value)} value={watch('category')}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="เลือกหมวดหมู่" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.keys(platformCategories).flatMap(p => platformCategories[p]).filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i).map(cat => (
-                                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                             {errors.category && <p className="text-xs text-destructive mt-1">{errors.category.message}</p>}
-                        </div>
-                    </div>
+            <Form {...form}>
+              <form onSubmit={handleSubmit(handleFormSubmit)}>
+                  <DialogHeader>
+                      <DialogTitle>{editingItem ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</DialogTitle>
+                      <DialogDescription>
+                          {editingItem ? 'แก้ไขรายละเอียดสินค้าด้านล่าง' : 'กรอกรายละเอียดสินค้าใหม่เพื่อเพิ่มในฐานข้อมูล'}
+                      </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
+                       <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="name" className="text-right">ชื่อสินค้า</Label>
+                          <div className="col-span-3">
+                              <Input id="name" {...register('name')} className={errors.name ? 'border-destructive' : ''} />
+                              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
+                          </div>
+                      </div>
+                       <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="price" className="text-right">ต้นทุน</Label>
+                          <div className="col-span-3">
+                             <Input id="price" type="number" step="0.01" {...register('price')} className={errors.price ? 'border-destructive' : ''}/>
+                             {errors.price && <p className="text-xs text-destructive mt-1">{errors.price.message}</p>}
+                          </div>
+                      </div>
+                       <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
+                          <div className="col-span-3">
+                              <Select onValueChange={(value) => setValue('category', value)} value={watch('category')}>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="เลือกหมวดหมู่" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      {Object.keys(platformCategories).flatMap(p => platformCategories[p]).filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i).map(cat => (
+                                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                               {errors.category && <p className="text-xs text-destructive mt-1">{errors.category.message}</p>}
+                          </div>
+                      </div>
 
-                    <div className='space-y-4 rounded-lg border p-4'>
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="space-y-3">
-                          <div className='flex items-center gap-2'>
-                            <Label htmlFor={`skus.${index}.sku`} className="flex-shrink-0">SKU #{index + 1}</Label>
-                            <div className='flex-grow'>
-                               <Input id={`skus.${index}.sku`} {...register(`skus.${index}.sku`)} placeholder="รหัสสินค้า" className={errors.skus?.[index]?.sku ? 'border-destructive' : ''} />
-                               {errors.skus?.[index]?.sku && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.sku?.message}</p>}
+                      <div className='space-y-4 rounded-lg border p-4'>
+                        {fields.map((field, index) => (
+                          <div key={field.id} className="space-y-3">
+                            <div className='flex items-center gap-2'>
+                              <Label htmlFor={`skus.${index}.sku`} className="flex-shrink-0">SKU #{index + 1}</Label>
+                              <div className='flex-grow'>
+                                 <Input id={`skus.${index}.sku`} {...register(`skus.${index}.sku`)} placeholder="รหัสสินค้า" className={errors.skus?.[index]?.sku ? 'border-destructive' : ''} />
+                                 {errors.skus?.[index]?.sku && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.sku?.message}</p>}
+                              </div>
+                              {fields.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><XCircle className="h-5 w-5 text-destructive" /></Button>}
                             </div>
-                            {fields.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><XCircle className="h-5 w-5 text-destructive" /></Button>}
-                          </div>
 
-                          <div className="pl-4">
-                            <Label>สำหรับแพลตฟอร์ม</Label>
-                            <Controller
-                              name={`skus.${index}.platform`}
-                              control={control}
-                              render={({ field }) => (
-                                <RadioGroup
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                  className="flex flex-wrap gap-4 mt-2"
-                                >
-                                  {platforms.map((platform) => (
-                                    <FormItem key={platform} className="flex items-center space-x-2 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem value={platform} id={`${field.name}-${platform}`}/>
-                                      </FormControl>
-                                      <Label htmlFor={`${field.name}-${platform}`}>{platform}</Label>
-                                    </FormItem>
-                                  ))}
-                                </RadioGroup>
-                              )}
-                            />
-                             {errors.skus?.[index]?.platform && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.platform?.message}</p>}
+                            <div className="pl-4">
+                              <Label>สำหรับแพลตฟอร์ม</Label>
+                              <Controller
+                                name={`skus.${index}.platform`}
+                                control={control}
+                                render={({ field }) => (
+                                  <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-wrap gap-4 mt-2"
+                                  >
+                                    {platforms.map((platform) => (
+                                      <FormItem key={platform} className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value={platform} id={`${field.name}-${platform}`}/>
+                                        </FormControl>
+                                        <Label htmlFor={`${field.name}-${platform}`}>{platform}</Label>
+                                      </FormItem>
+                                    ))}
+                                  </RadioGroup>
+                                )}
+                              />
+                               {errors.skus?.[index]?.platform && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.platform?.message}</p>}
+                            </div>
+                            {index < fields.length - 1 && <hr className='my-4'/>}
                           </div>
-                          {index < fields.length - 1 && <hr className='my-4'/>}
-                        </div>
-                      ))}
-                      <Button type="button" variant="outline" size="sm" onClick={() => append({ sku: '', platform: '' })}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> เพิ่ม SKU
-                      </Button>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="ghost">ยกเลิก</Button>
-                    </DialogClose>
-                    <Button type="submit" disabled={editingItem !== null}>{editingItem ? 'บันทึกการเปลี่ยนแปลง' : 'สร้างสินค้า'}</Button>
-                </DialogFooter>
-            </form>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" onClick={() => append({ sku: '', platform: '' })}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> เพิ่ม SKU
+                        </Button>
+                      </div>
+                  </div>
+                  <DialogFooter>
+                      <DialogClose asChild>
+                          <Button type="button" variant="ghost">ยกเลิก</Button>
+                      </DialogClose>
+                      <Button type="submit" disabled={editingItem !== null}>{editingItem ? 'บันทึกการเปลี่ยนแปลง' : 'สร้างสินค้า'}</Button>
+                  </DialogFooter>
+              </form>
+            </Form>
         </DialogContent>
       </Dialog>
       
