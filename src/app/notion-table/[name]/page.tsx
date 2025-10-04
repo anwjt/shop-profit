@@ -266,8 +266,11 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
 export default function ProductDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const productName = useMemo(() => decodeURIComponent(params.name as string), [params.name]);
-  const [allData, setAllData] useState<StockItem[]>([]);
+  const productName = useMemo(() => {
+    const name = params?.name;
+    return name ? decodeURIComponent(name as string) : '';
+  }, [params]);
+  const [allData, setAllData] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -285,6 +288,7 @@ export default function ProductDetailPage() {
 
 
   const productData = useMemo(() => {
+    if (!productName) return [];
     return allData.filter(item => item.name === productName);
   }, [allData, productName]);
   
@@ -330,8 +334,10 @@ export default function ProductDetailPage() {
   const selectedPlatformForForm = watch('skus.0.platform');
   
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (productName) {
+      fetchData();
+    }
+  }, [productName]);
   
   useEffect(() => {
     setCurrentPage(1);
@@ -347,7 +353,7 @@ export default function ProductDetailPage() {
         name: productData[0].name,
         price: productData[0].price,
       });
-    } else {
+    } else if (productName) {
         // If product data is not loaded yet, set form default from productName
         form.setValue('name', productName);
         editForm.reset({
@@ -952,5 +958,3 @@ export default function ProductDetailPage() {
     </>
   );
 }
-
-    
