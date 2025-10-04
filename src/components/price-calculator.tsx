@@ -24,6 +24,7 @@ import {
   RotateCcw,
   History,
   Table,
+  Settings,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -55,6 +56,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PLATFORM_FEES, calculatePrice, type CalculationResult, formatPrice, getPsychologicalPrice, getPlatformCategories } from '@/lib/price-calculation';
+import { SettingsPanel } from './settings-panel';
 
 
 const formSchema = z.object({
@@ -377,6 +379,7 @@ export default function PriceCalculator({ isStandalone = true }: PriceCalculator
                         คู่มือ
                     </Link>
                 </Button>
+                <SettingsPanel />
             </div>
         )}
         <CardHeader className="text-center">
