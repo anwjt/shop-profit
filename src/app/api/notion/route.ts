@@ -3,6 +3,18 @@ import { Client } from '@notionhq/client';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { StockItem } from '@/app/notion-table/page';
 
+// --- CONFIGURATION ---
+// IMPORTANT: Replace these strings with the actual property names from your Notion database.
+// These are case-sensitive.
+const PROPERTY_NAMES = {
+  name: 'Name',
+  stock: 'Stock',
+  price: 'Price',
+  status: 'Status',
+};
+// ---------------------
+
+
 // Initializing a client
 const notion = new Client({
   auth: process.env.NOTION_API_KEY,
@@ -13,11 +25,10 @@ const databaseId = process.env.NOTION_DATABASE_ID!;
 // This function converts Notion's complex page object into a simpler StockItem object.
 function pageToStockItem(page: any): StockItem | null {
   try {
-    // These property names MUST match your Notion database's column names.
-    const name = page.properties.Name?.title?.[0]?.plain_text ?? 'Untitled';
-    const stock = page.properties.Stock?.number ?? 0;
-    const price = page.properties.Price?.number ?? 0;
-    const status = page.properties.Status?.select?.name ?? 'Out of Stock';
+    const name = page.properties[PROPERTY_NAMES.name]?.title?.[0]?.plain_text ?? 'Untitled';
+    const stock = page.properties[PROPERTY_NAMES.stock]?.number ?? 0;
+    const price = page.properties[PROPERTY_NAMES.price]?.number ?? 0;
+    const status = page.properties[PROPERTY_NAMES.status]?.select?.name ?? 'Out of Stock';
 
     if (typeof stock !== 'number' || typeof price !== 'number') {
         return null;
@@ -51,7 +62,7 @@ export async function GET() {
       database_id: databaseId,
       sorts: [
         {
-          property: 'Name',
+          property: PROPERTY_NAMES.name,
           direction: 'ascending',
         },
       ],
@@ -78,19 +89,20 @@ export async function POST(req: NextRequest) {
     const response = await notion.pages.create({
       parent: { database_id: databaseId },
       properties: {
-        'Name': { title: [{ text: { content: name } }] },
-        'Stock': { number: stock },
-        'Price': { number: price },
-        'Status': { select: { name: status } },
+        [PROPERTY_NAMES.name]: { title: [{ text: { content: name } }] },
+        [PROPERTY_NAMES.stock]: { number: stock },
+        [PROPERTY_NAMES.price]: { number: price },
+        [PROPERTY_NAMES.status]: { select: { name: status } },
       },
     });
 
     const newItem = pageToStockItem(response);
     return NextResponse.json(newItem, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error: any)
+{
     console.error('Notion API Error (POST):', error);
-    return NextResponse.json({ error: error.message || 'Failed to create item in Notion.' }, { status: 500 });
+    return NextResponse.json({ error: error.body?.message || error.message || 'Failed to create item in Notion.' }, { status: 500 });
   }
 }
 
@@ -104,10 +116,10 @@ export async function PATCH(req: NextRequest) {
   
       // Construct the properties object for Notion API
       const properties: any = {};
-      if (data.name) properties.Name = { title: [{ text: { content: data.name } }] };
-      if (data.stock !== undefined) properties.Stock = { number: data.stock };
-      if (data.price !== undefined) properties.Price = { number: data.price };
-      if (data.status) properties.Status = { select: { name: data.status } };
+      if (data.name) properties[PROPERTY_NAMES.name] = { title: [{ text: { content: data.name } }] };
+      if (data.stock !== undefined) properties[PROPERTY_NAMES.stock] = { number: data.stock };
+      if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
+      if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
   
       const response = await notion.pages.update({
         page_id: id,
@@ -119,7 +131,7 @@ export async function PATCH(req: NextRequest) {
 
     } catch (error: any) {
       console.error('Notion API Error (PATCH):', error);
-      return NextResponse.json({ error: error.message || 'Failed to update item in Notion.' }, { status: 500 });
+      return NextResponse.json({ error: error.body?.message || error.message || 'Failed to update item in Notion.' }, { status: 500 });
     }
 }
 
@@ -140,6 +152,6 @@ export async function DELETE(req: NextRequest) {
 
     } catch (error: any) {
         console.error('Notion API Error (DELETE):', error);
-        return NextResponse.json({ error: error.message || 'Failed to delete item in Notion.' }, { status: 500 });
+        return NextResponse.json({ error: error.body?.message || error.message || 'Failed to delete item in Notion.' }, { status: 500 });
     }
 }
