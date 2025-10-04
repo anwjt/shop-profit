@@ -119,29 +119,50 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH: Update an existing page
+// PATCH: Update an existing page or a batch of pages
 export async function PATCH(req: NextRequest) {
     try {
-      const { id, ...data } = await req.json();
-      if (!id) {
-          return NextResponse.json({ error: 'Page ID is required for updating.' }, { status: 400 });
-      }
-  
-      const properties: any = {};
-      if (data.name) properties[PROPERTY_NAMES.name] = { title: [{ text: { content: data.name } }] };
-      if (data.sku !== undefined) properties[PROPERTY_NAMES.sku] = { rich_text: [{ text: { content: data.sku } }] };
-      if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
-      if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
-      if (data.platform) properties[PROPERTY_NAMES.platform] = { select: { name: data.platform } };
-      if (data.category) properties[PROPERTY_NAMES.category] = { select: { name: data.category } };
-  
-      const response = await notion.pages.update({
-        page_id: id,
-        properties,
-      });
+        const { batch, ...singleUpdateData } = await req.json();
 
-      const updatedItem = pageToStockItem(response);
-      return NextResponse.json(updatedItem, { status: 200 });
+        // Handle batch updates
+        if (batch && Array.isArray(batch)) {
+            const updatePromises = batch.map(item => {
+                const { id, ...data } = item;
+                 const properties: any = {};
+                if (data.name) properties[PROPERTY_NAMES.name] = { title: [{ text: { content: data.name } }] };
+                if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
+
+                return notion.pages.update({
+                    page_id: id,
+                    properties,
+                });
+            });
+
+            await Promise.all(updatePromises);
+            return NextResponse.json({ message: `${batch.length} items updated successfully` }, { status: 200 });
+        }
+
+        // Handle single item update
+        const { id, ...data } = singleUpdateData;
+        if (!id) {
+            return NextResponse.json({ error: 'Page ID is required for updating.' }, { status: 400 });
+        }
+    
+        const properties: any = {};
+        if (data.name) properties[PROPERTY_NAMES.name] = { title: [{ text: { content: data.name } }] };
+        if (data.sku !== undefined) properties[PROPERTY_NAMES.sku] = { rich_text: [{ text: { content: data.sku } }] };
+        if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
+        if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
+        if (data.platform) properties[PROPERTY_NAMES.platform] = { select: { name: data.platform } };
+        if (data.category) properties[PROPERTY_NAMES.category] = { select: { name: data.category } };
+    
+        const response = await notion.pages.update({
+          page_id: id,
+          properties,
+        });
+  
+        const updatedItem = pageToStockItem(response);
+        return NextResponse.json(updatedItem, { status: 200 });
 
     } catch (error: any) {
       console.error('Notion API Error (PATCH):', error);

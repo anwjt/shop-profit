@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart, CheckCircle, Filter, XCircle, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart, CheckCircle, Filter, XCircle, ChevronRight, Edit2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -90,6 +91,12 @@ const stockItemFormSchema = z.object({
 });
 
 type StockItemFormData = z.infer<typeof stockItemFormSchema>;
+
+const editProductFormSchema = z.object({
+    name: z.string().min(1, 'ชื่อสินค้าห้ามว่าง'),
+    price: z.coerce.number().min(0, 'ต้นทุนต้องไม่ติดลบ'),
+});
+type EditProductFormData = z.infer<typeof editProductFormSchema>;
 
 const platformCategories = getPlatformCategories();
 const platforms = Object.keys(platformCategories);
@@ -250,11 +257,13 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
 };
 
 export default function ProductDetailPage({ params }: { params: { name: string } }) {
+  const router = useRouter();
   const productName = decodeURIComponent(params.name);
   const [allData, setAllData] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [resultItem, setResultItem] = useState<StockItem | null>(null);
   const { toast } = useToast();
@@ -289,6 +298,10 @@ export default function ProductDetailPage({ params }: { params: { name: string }
     }
   });
 
+  const editForm = useForm<EditProductFormData>({
+    resolver: zodResolver(editProductFormSchema),
+  });
+
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = form;
 
   const { fields, append, remove } = useFieldArray({
@@ -311,8 +324,13 @@ export default function ProductDetailPage({ params }: { params: { name: string }
       form.setValue('name', productData[0].name);
       form.setValue('price', productData[0].price);
       form.setValue('category', productData[0].category);
+      
+      editForm.reset({
+        name: productData[0].name,
+        price: productData[0].price,
+      });
     }
-  }, [productData, form]);
+  }, [productData, form, editForm]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -332,24 +350,24 @@ export default function ProductDetailPage({ params }: { params: { name: string }
     }
   };
 
-  const handleOpenForm = (item: StockItem | null = null) => {
-    setEditingItem(item);
-    if (item) {
-        reset({
-            name: item.name,
-            price: item.price,
-            category: item.category,
-            skus: [{ sku: item.sku, platform: item.platform }],
-        });
-    } else { // Adding a new SKU to an existing product
-        reset({
-          name: productName,
-          price: productData.length > 0 ? productData[0].price : undefined,
-          category: productData.length > 0 ? productData[0].category : '',
-          skus: [{ sku: '', platform: '' }],
-        });
-    }
+  const handleOpenForm = () => {
+    reset({
+        name: productName,
+        price: productData.length > 0 ? productData[0].price : undefined,
+        category: productData.length > 0 ? productData[0].category : '',
+        skus: [{ sku: '', platform: '' }],
+    });
     setIsFormOpen(true);
+  };
+  
+  const handleOpenEditModal = () => {
+    if (productData.length > 0) {
+        editForm.reset({
+            name: productData[0].name,
+            price: productData[0].price,
+        });
+        setIsEditModalOpen(true);
+    }
   };
 
   const handleOpenResult = (item: StockItem) => {
@@ -394,6 +412,36 @@ export default function ProductDetailPage({ params }: { params: { name: string }
         toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
     }
 };
+
+  const handleEditFormSubmit = async (data: EditProductFormData) => {
+    try {
+        const itemIdsToUpdate = productData.map(item => ({ id: item.id, ...data }));
+
+        const response = await fetch('/api/notion', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ batch: itemIdsToUpdate }),
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update product data');
+        }
+
+        toast({ title: "✅ อัปเดตข้อมูลสำเร็จ", description: "ข้อมูลหลักของสินค้าถูกแก้ไขแล้ว" });
+        setIsEditModalOpen(false);
+        
+        // If name changed, redirect to the new page
+        if (data.name !== productName) {
+            router.push(`/notion-table/${encodeURIComponent(data.name)}`);
+        } else {
+            fetchData();
+        }
+
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    }
+  };
 
   const updateItemStatus = async (item: StockItem, newStatus: StockItem['status']) => {
     try {
@@ -523,9 +571,9 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem disabled={true} title="การแก้ไขแบบ Multi-SKU จะพร้อมในเร็วๆ นี้">
+                                <DropdownMenuItem disabled={true} title="การแก้ไข SKU จะพร้อมในเร็วๆ นี้">
                                     <Edit className="mr-2 h-4 w-4" />
-                                    <span>แก้ไข (เร็วๆ นี้)</span>
+                                    <span>แก้ไข SKU (เร็วๆ นี้)</span>
                                 </DropdownMenuItem>
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -538,7 +586,7 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                                         <AlertDialogHeader>
                                         <AlertDialogTitle>คุณแน่ใจหรือไม่?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            การกระทำนี้ไม่สามารถย้อนกลับได้ สินค้าจะถูกลบ (เก็บในถังขยะ) ออกจากฐานข้อมูล Notion ของคุณ
+                                            การกระทำนี้ไม่สามารถย้อนกลับได้ SKU นี้จะถูกลบ (เก็บในถังขยะ) ออกจากฐานข้อมูล Notion ของคุณ
                                         </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
@@ -650,10 +698,16 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                         </SelectContent>
                     </Select>
                  </div>
-                <Button onClick={() => handleOpenForm()}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    เพิ่ม SKU ใหม่
-                </Button>
+                 <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handleOpenEditModal}>
+                        <Edit2 className="mr-2 h-4 w-4" />
+                        แก้ไขข้อมูลสินค้า
+                    </Button>
+                    <Button onClick={handleOpenForm}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        เพิ่ม SKU ใหม่
+                    </Button>
+                </div>
               </div>
 
               {renderContent()}
@@ -671,7 +725,7 @@ export default function ProductDetailPage({ params }: { params: { name: string }
         </div>
       </main>
 
-      {/* Form Dialog */}
+      {/* Add SKU Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-xl">
             <Form {...form}>
@@ -768,6 +822,44 @@ export default function ProductDetailPage({ params }: { params: { name: string }
             </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-md">
+            <Form {...editForm}>
+                <form onSubmit={editForm.handleSubmit(handleEditFormSubmit)}>
+                    <DialogHeader>
+                        <DialogTitle>แก้ไขข้อมูลสินค้า</DialogTitle>
+                        <DialogDescription>
+                           การแก้ไขข้อมูลที่นี่จะอัปเดตข้อมูลให้กับทุก SKU ของสินค้านี้
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-name" className="text-right">ชื่อสินค้า</Label>
+                            <div className="col-span-3">
+                                <Input id="edit-name" {...editForm.register('name')} className={editForm.formState.errors.name ? 'border-destructive' : ''} />
+                                {editForm.formState.errors.name && <p className="text-xs text-destructive mt-1">{editForm.formState.errors.name.message}</p>}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-price" className="text-right">ต้นทุน</Label>
+                            <div className="col-span-3">
+                               <Input id="edit-price" type="number" step="0.01" {...editForm.register('price')} className={editForm.formState.errors.price ? 'border-destructive' : ''}/>
+                               {editForm.formState.errors.price && <p className="text-xs text-destructive mt-1">{editForm.formState.errors.price.message}</p>}
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="ghost">ยกเลิก</Button></DialogClose>
+                        <Button type="submit" disabled={editForm.formState.isSubmitting}>
+                            {editForm.formState.isSubmitting ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
       
       {/* Result Dialog */}
       <Dialog open={!!resultItem} onOpenChange={(isOpen) => !isOpen && setResultItem(null)}>
@@ -776,6 +868,3 @@ export default function ProductDetailPage({ params }: { params: { name: string }
     </>
   );
 }
-    
-
-    
