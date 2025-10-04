@@ -1,7 +1,7 @@
 
 import { Client } from '@notionhq/client';
 import { NextResponse, type NextRequest } from 'next/server';
-import type { StockItem } from '@/app/notion-table/page';
+import type { StockItem } from '@/app/notion-table/[name]/page';
 
 // --- CONFIGURATION ---
 // IMPORTANT: Replace these strings with the actual property names from your Notion database.
@@ -13,6 +13,7 @@ const PROPERTY_NAMES = {
   status: 'Status',
   platform: 'Platform', // Ensure this is a Select property in Notion
   category: 'Category',
+  ext: 'EXT',
 };
 // ---------------------
 
@@ -35,6 +36,7 @@ function pageToStockItem(page: any): StockItem | null {
     const status = properties[PROPERTY_NAMES.status]?.select?.name ?? 'รอขาย';
     const platform = properties[PROPERTY_NAMES.platform]?.select?.name ?? '';
     const category = properties[PROPERTY_NAMES.category]?.select?.name ?? '';
+    const ext = properties[PROPERTY_NAMES.ext]?.rich_text[0]?.plain_text ?? '';
 
     const validStatus = ['ขายแล้ว', 'รอขาย'].includes(status) 
         ? status as StockItem['status'] 
@@ -48,6 +50,7 @@ function pageToStockItem(page: any): StockItem | null {
       status: validStatus,
       platform,
       category,
+      ext,
     };
   } catch (error) {
     console.error(`Failed to process page ${page.id}:`, error);
@@ -90,16 +93,22 @@ export async function POST(req: NextRequest) {
   try {
     const { name, sku, price, status, platform, category } = await req.json();
 
-    const response = await notion.pages.create({
-      parent: { database_id: databaseId },
-      properties: {
+    const properties: any = {
         [PROPERTY_NAMES.name]: { title: [{ text: { content: name } }] },
         [PROPERTY_NAMES.sku]: { rich_text: [{ text: { content: sku } }] },
         [PROPERTY_NAMES.price]: { number: price },
         [PROPERTY_NAMES.status]: { select: { name: status } },
-        [PROPERTY_NAMES.platform]: { select: { name: platform } },
         [PROPERTY_NAMES.category]: { select: { name: category } },
-      },
+    };
+
+    // Notion API expects a select name, not an empty string if platform is provided
+    if (platform) {
+        properties[PROPERTY_NAMES.platform] = { select: { name: platform } };
+    }
+
+    const response = await notion.pages.create({
+      parent: { database_id: databaseId },
+      properties: properties,
     });
 
     const newItem = pageToStockItem(response);
@@ -155,7 +164,8 @@ export async function PATCH(req: NextRequest) {
         if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
         if (data.platform) properties[PROPERTY_NAMES.platform] = { select: { name: data.platform } };
         if (data.category) properties[PROPERTY_NAMES.category] = { select: { name: data.category } };
-    
+        if (data.ext !== undefined) properties[PROPERTY_NAMES.ext] = { rich_text: [{ text: { content: data.ext } }] };
+
         const response = await notion.pages.update({
           page_id: id,
           properties,

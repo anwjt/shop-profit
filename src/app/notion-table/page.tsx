@@ -48,16 +48,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getPlatformCategories } from '@/lib/price-calculation';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
+import type { StockItem } from './[name]/page';
 
-export type StockItem = {
-  id: string;
-  name: string;
-  sku: string;
-  price: number;
-  status: 'ขายแล้ว' | 'รอขาย';
-  platform: string;
-  category: string;
-};
 
 type GroupedStockItem = {
     name: string;

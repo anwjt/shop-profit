@@ -51,7 +51,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,9 +65,10 @@ import {
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { PLATFORM_FEES, calculatePrice, type CalculationResult, getPlatformCategories, formatPrice, getPsychologicalPrice } from '@/lib/price-calculation';
-import { Form, FormControl, FormItem } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
 
-type StockItem = {
+export type StockItem = {
   id: string;
   name:string;
   sku: string;
@@ -76,6 +76,7 @@ type StockItem = {
   status: 'ขายแล้ว' | 'รอขาย';
   platform: string; 
   category: string;
+  ext: string;
 };
 
 const skuSchema = z.object({
@@ -97,6 +98,12 @@ const editProductFormSchema = z.object({
     price: z.coerce.number().min(0, 'ต้นทุนต้องไม่ติดลบ'),
 });
 type EditProductFormData = z.infer<typeof editProductFormSchema>;
+
+const revertStatusFormSchema = z.object({
+  note: z.string().min(15, 'กรุณาใส่เหตุผลอย่างน้อย 15 ตัวอักษร'),
+});
+type RevertStatusFormData = z.infer<typeof revertStatusFormSchema>;
+
 
 const platformCategories = getPlatformCategories();
 const platforms = Object.keys(platformCategories);
@@ -271,6 +278,10 @@ export default function ProductDetailPage({ params }: { params: { name: string }
   const [platformFilter, setPlatformFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  const [isRevertStatusDialogOpen, setIsRevertStatusDialogOpen] = useState(false);
+  const [itemToRevert, setItemToRevert] = useState<StockItem | null>(null);
+
 
   const productData = useMemo(() => {
     return allData.filter(item => item.name === productName);
@@ -301,6 +312,12 @@ export default function ProductDetailPage({ params }: { params: { name: string }
   const editForm = useForm<EditProductFormData>({
     resolver: zodResolver(editProductFormSchema),
   });
+
+  const revertStatusForm = useForm<RevertStatusFormData>({
+    resolver: zodResolver(revertStatusFormSchema),
+    defaultValues: { note: '' },
+  });
+
 
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = form;
 
@@ -443,12 +460,20 @@ export default function ProductDetailPage({ params }: { params: { name: string }
     }
   };
 
-  const updateItemStatus = async (item: StockItem, newStatus: StockItem['status']) => {
+  const updateItemStatus = async (item: StockItem, newStatus: StockItem['status'], note?: string) => {
     try {
+        const payload: { id: string; status: StockItem['status']; ext?: string } = {
+            id: item.id,
+            status: newStatus,
+        };
+        if (note) {
+            payload.ext = note;
+        }
+
         const response = await fetch('/api/notion', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: item.id, status: newStatus }),
+            body: JSON.stringify(payload),
         });
         if (!response.ok) {
             const errorData = await response.json();
@@ -459,7 +484,25 @@ export default function ProductDetailPage({ params }: { params: { name: string }
     } catch (e: any) {
         toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
     }
-  }
+  };
+  
+  const handleStatusChangeClick = (item: StockItem) => {
+    if (item.status === 'ขายแล้ว') {
+        setItemToRevert(item);
+        setIsRevertStatusDialogOpen(true);
+        revertStatusForm.reset({ note: '' });
+    } else {
+        updateItemStatus(item, 'ขายแล้ว');
+    }
+  };
+
+  const handleRevertStatusSubmit = async (data: RevertStatusFormData) => {
+    if (!itemToRevert) return;
+    await updateItemStatus(itemToRevert, 'รอขาย', data.note);
+    setIsRevertStatusDialogOpen(false);
+    setItemToRevert(null);
+  };
+
 
   const handleDelete = async (itemId: string) => {
     try {
@@ -551,11 +594,11 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                     <TableCell className="text-center">
                         <div className="flex justify-center">
                             {item.status === 'รอขาย' ? (
-                                <Button variant="secondary" size="sm" onClick={() => updateItemStatus(item, 'ขายแล้ว')}>
+                                <Button variant="secondary" size="sm" onClick={() => handleStatusChangeClick(item)}>
                                     <ShoppingCart className="mr-2 h-4 w-4" /> รอขาย
                                 </Button>
                             ) : (
-                                <Badge variant="default" className="bg-green-600 hover:bg-green-700 cursor-pointer" onClick={() => updateItemStatus(item, 'รอขาย')}>
+                                <Badge variant="default" className="bg-green-600 hover:bg-green-700 cursor-pointer" onClick={() => handleStatusChangeClick(item)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 ขายแล้ว
                                 </Badge>
@@ -865,6 +908,40 @@ export default function ProductDetailPage({ params }: { params: { name: string }
       <Dialog open={!!resultItem} onOpenChange={(isOpen) => !isOpen && setResultItem(null)}>
         <ResultDisplay item={resultItem} />
       </Dialog>
+
+       {/* Revert Status Note Dialog */}
+        <AlertDialog open={isRevertStatusDialogOpen} onOpenChange={setIsRevertStatusDialogOpen}>
+            <AlertDialogContent>
+                <Form {...revertStatusForm}>
+                    <form onSubmit={revertStatusForm.handleSubmit(handleRevertStatusSubmit)}>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>ใส่เหตุผลการเปลี่ยนสถานะ</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                โปรดระบุเหตุผลที่เปลี่ยนสถานะจาก "ขายแล้ว" กลับเป็น "รอขาย"
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="py-4">
+                            <FormField
+                                control={revertStatusForm.control}
+                                name="note"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Textarea placeholder="เช่น ลูกค้ายกเลิกออเดอร์, คืนสินค้า, etc." {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setItemToRevert(null)}>ยกเลิก</AlertDialogCancel>
+                            <AlertDialogAction type="submit">ยืนยัน</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </form>
+                </Form>
+            </AlertDialogContent>
+        </AlertDialog>
     </>
   );
 }
