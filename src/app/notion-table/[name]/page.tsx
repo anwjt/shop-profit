@@ -112,8 +112,15 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
             profitValue = { profitMargin: customProfit };
         }
         
+        const platformKey = Object.keys(platformCategories).find(key => 
+            platformCategories[key].some(cat => cat.id === item.category) && 
+            key.replace(/-/g, ' ').toLowerCase() === item.platform.toLowerCase()
+        );
+
+        if (!platformKey) return null;
+
         return calculatePrice({
-            platform: platformToCalculate,
+            platform: platformKey,
             category: item.category,
             cost: item.price,
             ...profitValue,

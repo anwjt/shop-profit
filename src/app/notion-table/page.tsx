@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Link from 'next/link';
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, ChevronRight, Filter } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, ChevronRight, Filter, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
     Select,
     SelectContent,
@@ -64,17 +66,22 @@ type GroupedStockItem = {
     items: StockItem[];
 }
 
+const skuSchema = z.object({
+  sku: z.string().min(1, "SKU ห้ามว่าง"),
+  platform: z.string({required_error: "ต้องเลือกแพลตฟอร์ม"}).min(1, "ต้องเลือกแพลตฟอร์ม"),
+});
+
 const formSchema = z.object({
   name: z.string().min(1, 'ชื่อสินค้าห้ามว่าง'),
   price: z.coerce.number().min(0, 'ราคาต้องเป็นตัวเลขไม่ติดลบ'),
   category: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
-  sku: z.string().min(1, "SKU ห้ามว่าง"),
-  platform: z.string({required_error: "ต้องเลือกแพลตฟอร์ม"}).min(1, "ต้องเลือกแพลตฟอร์ม"),
+  skus: z.array(skuSchema).min(1, "ต้องมีอย่างน้อย 1 SKU"),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
 const platformCategories = getPlatformCategories();
+const platforms = Object.keys(platformCategories);
 
 export default function NotionTablePage() {
   const [data, setData] = useState<StockItem[]>([]);
@@ -92,14 +99,18 @@ export default function NotionTablePage() {
       name: '',
       price: undefined,
       category: '',
-      sku: '',
-      platform: '',
+      skus: [{ sku: '', platform: '' }],
     }
   });
 
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = form;
+  
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "skus",
+  });
 
-  const selectedPlatformForForm = watch('platform');
+  const selectedPlatformForForm = watch('skus.0.platform');
   
   useEffect(() => {
     fetchData();
@@ -165,27 +176,42 @@ export default function NotionTablePage() {
       name: '',
       price: undefined,
       category: '',
-      sku: '',
-      platform: '',
+      skus: [{ sku: '', platform: '' }],
     });
     setIsFormOpen(true);
   };
 
   const handleFormSubmit = async (formData: FormData) => {
     try {
-        const payload = { ...formData, status: 'รอขาย' };
-        const response = await fetch('/api/notion', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+        const { name, price, category } = formData;
+        
+        const creationPromises = formData.skus.map(skuItem => {
+            const { sku, platform } = skuItem;
+            const payload = {
+                name,
+                price,
+                category,
+                sku,
+                platform,
+                status: 'รอขาย'
+            };
+            return fetch('/api/notion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'An operation failed');
+        const responses = await Promise.all(creationPromises);
+
+        for (const response of responses) {
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'An operation failed');
+            }
         }
 
-        toast({ title: "✅ เพิ่มสินค้าสำเร็จ", description: `สินค้าถูกเพิ่มใน Notion เรียบร้อยแล้ว` });
+        toast({ title: "✅ เพิ่มสินค้าสำเร็จ", description: `สินค้าใหม่ถูกเพิ่มใน Notion เรียบร้อยแล้ว` });
         fetchData(); // Refresh data from Notion
         setIsFormOpen(false);
 
@@ -416,44 +442,12 @@ export default function NotionTablePage() {
                               {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
                           </div>
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="sku" className="text-right">SKU</Label>
-                          <div className="col-span-3">
-                              <Input id="sku" {...register('sku')} className={errors.sku ? 'border-destructive' : ''} />
-                              {errors.sku && <p className="text-xs text-destructive mt-1">{errors.sku.message}</p>}
-                          </div>
-                      </div>
+                      
                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="price" className="text-right">ต้นทุน</Label>
                           <div className="col-span-3">
                              <Input id="price" type="number" step="0.01" {...register('price')} className={errors.price ? 'border-destructive' : ''}/>
                              {errors.price && <p className="text-xs text-destructive mt-1">{errors.price.message}</p>}
-                          </div>
-                      </div>
-                       <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="platform" className="text-right">แพลตฟอร์ม</Label>
-                          <div className="col-span-3">
-                             <FormField
-                                control={control}
-                                name="platform"
-                                render={({ field }) => (
-                                <FormItem>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                      <FormControl>
-                                          <SelectTrigger>
-                                              <SelectValue placeholder="เลือกแพลตฟอร์ม" />
-                                          </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                          <SelectItem value="Shopee">Shopee</SelectItem>
-                                          <SelectItem value="Lazada">Lazada</SelectItem>
-                                          <SelectItem value="TikTok Shop">TikTok Shop</SelectItem>
-                                      </SelectContent>
-                                  </Select>
-                                  {errors.platform && <p className="text-xs text-destructive mt-1">{errors.platform.message}</p>}
-                                </FormItem>
-                                )}
-                              />
                           </div>
                       </div>
                        <div className="grid grid-cols-4 items-center gap-4">
@@ -467,11 +461,11 @@ export default function NotionTablePage() {
                                   <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatformForForm}>
                                     <FormControl>
                                       <SelectTrigger>
-                                          <SelectValue placeholder="เลือกหมวดหมู่" />
+                                          <SelectValue placeholder="เลือกหมวดหมู่ (ต้องเลือกแพลตฟอร์มก่อน)" />
                                       </SelectTrigger>
                                     </FormControl>
                                       <SelectContent>
-                                          {platformCategories[selectedPlatformForForm?.toLowerCase() || '']?.map(cat => (
+                                          {platformCategories[selectedPlatformForForm?.toLowerCase().replace(' ','-') || '']?.map(cat => (
                                               <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                           ))}
                                       </SelectContent>
@@ -482,6 +476,52 @@ export default function NotionTablePage() {
                               />
                           </div>
                       </div>
+
+                       <div className='space-y-4 rounded-lg border p-4'>
+                        {fields.map((field, index) => (
+                          <div key={field.id} className="space-y-3">
+                            <div className='flex items-center gap-2'>
+                              <Label htmlFor={`skus.${index}.sku`} className="flex-shrink-0">SKU #{index + 1}</Label>
+                              <div className='flex-grow'>
+                                 <Input id={`skus.${index}.sku`} {...register(`skus.${index}.sku`)} placeholder="รหัสสินค้า" className={errors.skus?.[index]?.sku ? 'border-destructive' : ''} />
+                                 {errors.skus?.[index]?.sku && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.sku?.message}</p>}
+                              </div>
+                              {fields.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><XCircle className="h-5 w-5 text-destructive" /></Button>}
+                            </div>
+
+                            <div className="pl-4">
+                              <Label>สำหรับแพลตฟอร์ม</Label>
+                              <Controller
+                                name={`skus.${index}.platform`}
+                                control={control}
+                                render={({ field }) => (
+                                  <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-wrap gap-4 mt-2"
+                                  >
+                                    {platforms.map((platform) => (
+                                      <FormItem key={platform} className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value={platform.charAt(0).toUpperCase() + platform.slice(1).replace('-',' ')} id={`${field.name}-${platform}`} />
+                                        </FormControl>
+                                        <Label htmlFor={`${field.name}-${platform}`}>{platform.charAt(0).toUpperCase() + platform.slice(1).replace('-',' ')}</Label>
+                                      </FormItem>
+                                    ))}
+                                  </RadioGroup>
+                                )}
+                              />
+                               {errors.skus?.[index]?.platform && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.platform?.message}</p>}
+                            </div>
+                            {index < fields.length - 1 && <hr className='my-4'/>}
+                          </div>
+                        ))}
+                        
+                        <Button type="button" variant="outline" size="sm" onClick={() => append({ sku: '', platform: '' })}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> เพิ่ม SKU
+                        </Button>
+                      </div>
+
                   </div>
                   <DialogFooter>
                       <DialogClose asChild>
@@ -496,3 +536,5 @@ export default function NotionTablePage() {
     </>
   );
 }
+
+    
