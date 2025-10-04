@@ -2,6 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import {
   Card,
   CardContent,
@@ -19,10 +22,46 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from '@/components/ui/select';
+import { useToast } from "@/hooks/use-toast";
 
 
 export type StockItem = {
@@ -32,6 +71,15 @@ export type StockItem = {
   price: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 };
+
+const stockItemSchema = z.object({
+    name: z.string().min(1, 'ชื่อสินค้าห้ามว่าง'),
+    stock: z.coerce.number().min(0, 'สต็อกต้องเป็นตัวเลขไม่ติดลบ'),
+    price: z.coerce.number().min(0, 'ราคาต้องเป็นตัวเลขไม่ติดลบ'),
+    status: z.enum(['In Stock', 'Low Stock', 'Out of Stock']),
+});
+
+type StockItemFormData = z.infer<typeof stockItemSchema>;
 
 const getStatusVariant = (status: StockItem['status']) => {
   switch (status) {
@@ -46,32 +94,112 @@ const getStatusVariant = (status: StockItem['status']) => {
   }
 };
 
+
 export default function NotionTablePage() {
   const [data, setData] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<StockItem | null>(null);
+  const { toast } = useToast();
+
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<StockItemFormData>({
+    resolver: zodResolver(stockItemSchema),
+    defaultValues: {
+        status: 'In Stock'
+    }
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch('/api/notion');
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
-        setData(result);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/notion');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      setData(result);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenForm = (item: StockItem | null = null) => {
+    setEditingItem(item);
+    if (item) {
+        reset({
+            name: item.name,
+            stock: item.stock,
+            price: item.price,
+            status: item.status,
+        });
+    } else {
+        reset({ name: '', stock: 0, price: 0, status: 'In Stock' });
+    }
+    setIsFormOpen(true);
+  };
+
+  const handleFormSubmit = async (formData: StockItemFormData) => {
+    const url = '/api/notion';
+    const method = editingItem ? 'PATCH' : 'POST';
+    const body = JSON.stringify(editingItem ? { ...formData, id: editingItem.id } : formData);
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Operation failed');
+      }
+
+      const result: StockItem = await response.json();
+
+      if (editingItem) {
+        setData(data.map(item => (item.id === result.id ? result : item)));
+        toast({ title: "✅ อัปเดตสำเร็จ", description: `สินค้า "${result.name}" ถูกแก้ไขแล้ว` });
+      } else {
+        setData([result, ...data]);
+        toast({ title: "✅ เพิ่มสินค้าสำเร็จ", description: `"${result.name}" ถูกเพิ่มในรายการแล้ว` });
+      }
+
+      setIsFormOpen(false);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    }
+  };
+
+  const handleDelete = async (itemId: string) => {
+    try {
+        const response = await fetch('/api/notion', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: itemId }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete');
+        }
+
+        setData(data.filter(item => item.id !== itemId));
+        toast({ title: "🗑️ ลบสำเร็จ", description: "สินค้าถูกลบออกจากรายการแล้ว" });
+
+    } catch(e: any) {
+        toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    }
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -100,7 +228,7 @@ export default function NotionTablePage() {
             <p>ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการตั้งค่าและลองใหม่อีกครั้ง:</p>
             <ul className="list-disc list-inside mt-2 text-xs">
               <li>ตรวจสอบว่า `NOTION_API_KEY` และ `NOTION_DATABASE_ID` ในไฟล์ `.env.local` ถูกต้อง</li>
-              <li>ตรวจสอบว่า Integration ของคุณได้ถูกเชิญให้เข้าถึง Database ใน Notion แล้ว</li>
+              <li>ตรวจสอบว่า Integration ของคุณได้ถูกเชิญให้เข้าถึง Database ใน Notion และได้รับสิทธิ์ในการ "Read", "Update", และ "Insert"</li>
                <li><span className="font-mono bg-destructive-foreground/20 p-1 rounded">Error: {error}</span></li>
             </ul>
           </AlertDescription>
@@ -108,13 +236,13 @@ export default function NotionTablePage() {
       );
     }
 
-    if (data.length === 0) {
+    if (data.length === 0 && !loading) {
         return (
              <Alert>
                 <Info className="h-4 w-4" />
                 <AlertTitle>ไม่พบข้อมูล</AlertTitle>
                 <AlertDescription>
-                    ไม่พบข้อมูลสินค้าในฐานข้อมูล Notion หรือฐานข้อมูลอาจจะว่างเปล่า
+                    ไม่พบข้อมูลสินค้าในฐานข้อมูล Notion หรือฐานข้อมูลอาจจะว่างเปล่า ลองเพิ่มสินค้าชิ้นแรกของคุณดูสิ
                 </AlertDescription>
             </Alert>
         )
@@ -129,6 +257,7 @@ export default function NotionTablePage() {
               <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-right">จำนวนในสต็อก</TableHead>
               <TableHead className="text-right">ราคา (บาท)</TableHead>
+              <TableHead className="text-right w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -140,6 +269,42 @@ export default function NotionTablePage() {
                 </TableCell>
                 <TableCell className="text-right">{item.stock}</TableCell>
                 <TableCell className="text-right font-bold">{item.price.toFixed(2)}</TableCell>
+                <TableCell className="text-right">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleOpenForm(item)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>แก้ไข</span>
+                            </DropdownMenuItem>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                        <span className='text-destructive'>ลบ</span>
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>คุณแน่ใจหรือไม่?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        การกระทำนี้ไม่สามารถย้อนกลับได้ สินค้าจะถูกลบ (เก็บในถังขยะ) ออกจากฐานข้อมูล Notion ของคุณ
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(item.id)} className='bg-destructive hover:bg-destructive/90'>ยืนยันการลบ</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -149,34 +314,101 @@ export default function NotionTablePage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-8">
-      <div className="w-full max-w-4xl space-y-6">
-        <Card className="w-full shadow-lg">
-          <CardHeader className="text-center">
-            <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
-              <Table className="w-8 h-8" />
-            </div>
-            <CardTitle className="font-headline text-3xl">
-              ตารางสต็อกสินค้า (จาก Notion)
-            </CardTitle>
-            <CardDescription>
-              ข้อมูลสต็อกสินค้าที่ดึงมาจากฐานข้อมูลใน Notion ของคุณแบบ Real-time
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {renderContent()}
-
-            <div className="text-center pt-4">
-               <Button asChild>
-                  <Link href="/">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    กลับไปที่เครื่องคำนวณ
-                  </Link>
+    <>
+      <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-8">
+        <div className="w-full max-w-4xl space-y-6">
+          <Card className="w-full shadow-lg">
+            <CardHeader className="text-center">
+              <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                <Table className="w-8 h-8" />
+              </div>
+              <CardTitle className="font-headline text-3xl">
+                ตารางสต็อกสินค้า (จาก Notion)
+              </CardTitle>
+              <CardDescription>
+                ข้อมูลสต็อกสินค้าที่ดึงมาจากฐานข้อมูลใน Notion ของคุณแบบ Real-time
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-end">
+                <Button onClick={() => handleOpenForm()}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    เพิ่มสินค้าใหม่
                 </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+              </div>
+
+              {renderContent()}
+
+              <div className="text-center pt-4">
+                <Button asChild>
+                    <Link href="/">
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      กลับไปที่เครื่องคำนวณ
+                    </Link>
+                  </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+
+      {/* Form Dialog */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+            <form onSubmit={handleSubmit(handleFormSubmit)}>
+                <DialogHeader>
+                    <DialogTitle>{editingItem ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</DialogTitle>
+                    <DialogDescription>
+                        {editingItem ? 'แก้ไขรายละเอียดสินค้าด้านล่าง' : 'กรอกรายละเอียดสินค้าใหม่เพื่อเพิ่มในฐานข้อมูล'}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">ชื่อสินค้า</Label>
+                        <div className="col-span-3">
+                            <Input id="name" {...register('name')} className={errors.name ? 'border-destructive' : ''} />
+                            {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="price" className="text-right">ราคา</Label>
+                        <div className="col-span-3">
+                           <Input id="price" type="number" step="0.01" {...register('price')} className={errors.price ? 'border-destructive' : ''}/>
+                           {errors.price && <p className="text-xs text-destructive mt-1">{errors.price.message}</p>}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="stock" className="text-right">สต็อก</Label>
+                        <div className="col-span-3">
+                            <Input id="stock" type="number" {...register('stock')} className={errors.stock ? 'border-destructive' : ''}/>
+                            {errors.stock && <p className="text-xs text-destructive mt-1">{errors.stock.message}</p>}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="status" className="text-right">สถานะ</Label>
+                        <div className="col-span-3">
+                            <Select onValueChange={(value) => setValue('status', value as StockItem['status'])} defaultValue={editingItem?.status || 'In Stock'}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="เลือกสถานะ" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="In Stock">In Stock</SelectItem>
+                                    <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="ghost">ยกเลิก</Button>
+                    </DialogClose>
+                    <Button type="submit">{editingItem ? 'บันทึกการเปลี่ยนแปลง' : 'สร้างสินค้า'}</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
