@@ -438,9 +438,8 @@ export default function NotionTablePage() {
               <TableHead>ชื่อสินค้า</TableHead>
               <TableHead>แพลตฟอร์ม</TableHead>
               <TableHead>SKU</TableHead>
-              <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-right">ต้นทุน (บาท)</TableHead>
-              <TableHead className="text-center">การขาย</TableHead>
+              <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-right w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -455,9 +454,6 @@ export default function NotionTablePage() {
                     </Button>
                 </TableCell>
                 <TableCell>{item.sku}</TableCell>
-                <TableCell className="text-center">
-                  <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
-                </TableCell>
                 <TableCell className="text-right font-bold">{item.price.toFixed(2)}</TableCell>
                 <TableCell className="text-center">
                     {item.status === 'รอขาย' ? (
@@ -465,9 +461,10 @@ export default function NotionTablePage() {
                            <ShoppingCart className="mr-2 h-4 w-4" /> ขายแล้ว
                         </Button>
                     ) : (
-                       <div className="flex justify-center items-center">
-                         <CheckCircle className="h-5 w-5 text-green-500" />
-                       </div>
+                       <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                         <CheckCircle className="mr-2 h-4 w-4" />
+                         ขายแล้ว
+                       </Badge>
                     )}
                 </TableCell>
                 <TableCell className="text-right">
@@ -649,4 +646,5 @@ export default function NotionTablePage() {
     </>
   );
 }
+    
     
