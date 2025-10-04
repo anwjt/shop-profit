@@ -65,7 +65,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { PLATFORM_FEES, calculatePrice, type CalculationResult, getPlatformCategories, formatPrice, getPsychologicalPrice } from '@/lib/price-calculation';
-import { Form, FormControl, FormItem, FormField } from '@/components/ui/form';
+import { Form, FormControl, FormItem } from '@/components/ui/form';
 
 type StockItem = {
   id: string;
@@ -173,7 +173,7 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
                                 </div>
                             </div>
                             {editProfit && (
-                                <div className="relative">
+                                <div className="relative mt-2">
                                     <Input
                                         type="number"
                                         value={customProfit}
@@ -209,6 +209,9 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
                             <p className={`text-2xl font-semibold mt-1 text-center ${calculationResult.profit > 0 ? 'text-green-600' : 'text-foreground'}`}>
                                 ฿{formatPrice(calculationResult.profit)}
                             </p>
+                             {!noProfit && !editProfit && (
+                                <p className="text-xs text-center text-muted-foreground mt-1">(จากกำไรพื้นฐาน 20%)</p>
+                            )}
                         </div>
                     </div>
                     {calculationResult.platform === 'shopee' && (
@@ -773,5 +776,6 @@ export default function ProductDetailPage({ params }: { params: { name: string }
     </>
   );
 }
+    
 
     
