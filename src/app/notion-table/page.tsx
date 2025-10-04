@@ -50,7 +50,7 @@ export default function NotionTablePage() {
   return (
     <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-8">
       <div className="w-full max-w-4xl space-y-6">
-        <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
+        <Card className="w-full shadow-lg">
           <CardHeader className="text-center">
             <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
               <Table className="w-8 h-8" />
@@ -63,15 +63,15 @@ export default function NotionTablePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <Alert variant="default" className="mt-4 bg-yellow-100/50 border-yellow-300">
-              <Info className="h-4 w-4 text-yellow-800" />
-              <AlertTitle className="text-yellow-800">ข้อมูลจำลอง</AlertTitle>
-              <AlertDescription className="text-yellow-700">
+            <Alert variant="default" className="bg-yellow-100/80 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-800">
+              <Info className="h-4 w-4 text-yellow-800 dark:text-yellow-300" />
+              <AlertTitle className="text-yellow-800 dark:text-yellow-300">ข้อมูลจำลอง</AlertTitle>
+              <AlertDescription className="text-yellow-700 dark:text-yellow-400">
                 ข้อมูลที่แสดงในตารางนี้เป็นเพียงข้อมูลตัวอย่าง ไม่ได้ดึงมาจาก Notion API โดยตรง เนื่องด้วยข้อจำกัดด้านความปลอดภัยในการใช้ API Key ในฝั่ง Client-side
               </AlertDescription>
             </Alert>
             
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border">
                 <UiTable>
                 <TableHeader>
                     <TableRow>
@@ -110,5 +110,3 @@ export default function NotionTablePage() {
     </main>
   );
 }
-
-    

@@ -35,7 +35,7 @@ export default function DocsPage() {
   return (
     <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-8">
       <div className="w-full max-w-4xl space-y-6">
-        <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
+        <Card className="w-full shadow-lg">
           <CardHeader className="text-center">
             <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
               <BookMarked className="w-8 h-8" />
@@ -65,16 +65,16 @@ export default function DocsPage() {
               <p className="text-muted-foreground">
                 หัวใจของการคำนวณคือการหาราคาขาย (Selling Price) ที่เมื่อถูกหักค่าธรรมเนียมทั้งหมดแล้ว จะยังคงเหลือเพียงพอสำหรับต้นทุนและกำไรที่คุณต้องการ สูตรหลักที่ใช้คือ:
               </p>
-              <div className="mt-4 p-4 bg-muted/50 rounded-lg text-center font-mono text-sm sm:text-base">
+              <div className="mt-4 p-4 bg-muted rounded-lg text-center font-mono text-sm sm:text-base">
               ราคาขาย = (ต้นทุนรวม + กำไรที่ต้องการ + ส่วนลด) / (1 - อัตราค่าธรรมเนียมรวม)
               </div>
                <p className="text-muted-foreground mt-2 text-xs">
                 *ต้นทุนรวม = ราคาต้นทุนสินค้า + ค่าใช้จ่ายอื่นๆ <br/>
                 *อัตราค่าธรรมเนียมรวม = (%ค่าคอมมิชชั่น + %ค่าธรรมเนียมอื่นๆ) + %ค่าคอม Affiliate
               </p>
-              <div className="mt-4 p-4 bg-yellow-100/50 rounded-lg border border-yellow-300 text-sm">
-                <h4 className="font-bold text-yellow-800">ทำไมต้องบวก "ส่วนลด" เข้าไปในตัวตั้ง?</h4>
-                <p className="text-yellow-700 mt-1">
+              <div className="mt-4 p-4 bg-yellow-100/80 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-800 text-sm">
+                <h4 className="font-bold text-yellow-800 dark:text-yellow-300">ทำไมต้องบวก "ส่วนลด" เข้าไปในตัวตั้ง?</h4>
+                <p className="text-yellow-700 dark:text-yellow-400 mt-1">
                   เพราะค่าธรรมเนียมส่วนใหญ่จะถูกคิดจาก "ราคาขายหลังหักส่วนลด" การบวกส่วนลดเข้าไปในสูตรก่อนหาร จะทำให้ราคาขายที่คำนวณได้ "สูงขึ้น" เพื่อชดเชยค่าธรรมเนียมที่จะหายไปจากการให้ส่วนลดนั้นเอง จึงมั่นใจได้ว่าแม้จะลดราคาให้ลูกค้าแล้ว กำไรของคุณจะยังคงเท่าเดิมตามที่ตั้งใจไว้
                 </p>
               </div>
@@ -277,7 +277,7 @@ export default function DocsPage() {
                   <AccordionTrigger>ตัวอย่าง: ขายเคสโทรศัพท์บน Shopee</AccordionTrigger>
                   <AccordionContent className="text-sm">
                     <p className="font-semibold mb-2">สถานการณ์:</p>
-                    <ul className="list-disc list-inside space-y-1 mb-4 p-4 bg-muted/30 rounded-lg">
+                    <ul className="list-disc list-inside space-y-1 mb-4 p-4 bg-muted rounded-lg">
                       <li>ราคาต้นทุนสินค้า: <span className="font-bold">100</span> บาท</li>
                       <li>ค่าแพ็คของ (ค่าใช้จ่ายอื่น): <span className="font-bold">5</span> บาท</li>
                       <li>ต้องการกำไร: <span className="font-bold">20%</span> (ของต้นทุนสินค้า = 20 บาท)</li>
@@ -291,20 +291,20 @@ export default function DocsPage() {
                       <li><span className="font-semibold">กำไรที่ต้องการ:</span> 100 * 20% = <span className="font-bold">20</span> บาท</li>
                       <li><span className="font-semibold">อัตราค่าธรรมเนียมรวม:</span> 11.77% (แพลตฟอร์ม) + 3% (Affiliate) = <span className="font-bold">14.77%</span> หรือ 0.1477</li>
                       <li><span className="font-semibold">แทนค่าในสูตร:</span>
-                        <div className="font-mono p-3 bg-muted/50 my-2 rounded-md text-xs sm:text-sm">
+                        <div className="font-mono p-3 bg-muted my-2 rounded-md text-xs sm:text-sm">
                           ราคาขาย = (ต้นทุนรวม + กำไร + ส่วนลด) / (1 - อัตราค่าธรรมเนียมรวม)<br/>
                           ราคาขาย = (105 + 20 + 10) / (1 - 0.1477)<br/>
                           ราคาขาย = 135 / 0.8523 ≈ <span className="font-bold">158.39</span> บาท
                         </div>
                       </li>
                       <li><span className="font-semibold">พิสูจน์กำไร:</span>
-                        <ul className="list-disc list-inside mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                          <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600">158.39</span> บาท</li>
+                        <ul className="list-disc list-inside mt-2 p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600 dark:text-blue-400">158.39</span> บาท</li>
                           <li>หักส่วนลดร้านค้า: -10.00 บาท (เหลือยอดสำหรับคิดค่าธรรมเนียม <span className="font-bold">148.39</span>)</li>
-                          <li>หักค่าธรรมเนียม Shopee (11.77% ของ 148.39): <span className="text-red-600">-17.46</span> บาท</li>
-                          <li>หักค่าคอม Affiliate (3% ของราคาขาย 158.39): <span className="text-red-600">-4.75</span> บาท</li>
-                          <li>หักต้นทุนรวม: <span className="text-red-600">-105.00</span> บาท</li>
-                          <li><span className="font-bold">กำไรสุทธิ: 158.39 - 10 - 17.46 - 4.75 - 105 = <span className="text-green-600 font-bold text-base">21.18</span> บาท*</span></li>
+                          <li>หักค่าธรรมเนียม Shopee (11.77% ของ 148.39): <span className="text-red-600 dark:text-red-400">-17.46</span> บาท</li>
+                          <li>หักค่าคอม Affiliate (3% ของราคาขาย 158.39): <span className="text-red-600 dark:text-red-400">-4.75</span> บาท</li>
+                          <li>หักต้นทุนรวม: <span className="text-red-600 dark:text-red-400">-105.00</span> บาท</li>
+                          <li><span className="font-bold">กำไรสุทธิ: 158.39 - 10 - 17.46 - 4.75 - 105 = <span className="text-green-600 dark:text-green-400 font-bold text-base">21.18</span> บาท*</span></li>
                         </ul>
                          <p className="text-xs text-muted-foreground mt-1">*กำไรที่ได้อาจสูงกว่าที่คาดการณ์เล็กน้อยเนื่องจากการปัดเศษทศนิยม</p>
                       </li>
@@ -315,7 +315,7 @@ export default function DocsPage() {
                   <AccordionTrigger>ตัวอย่าง: ขายเสื้อผ้าบน Lazada</AccordionTrigger>
                    <AccordionContent className="text-sm">
                     <p className="font-semibold mb-2">สถานการณ์:</p>
-                    <ul className="list-disc list-inside space-y-1 mb-4 p-4 bg-muted/30 rounded-lg">
+                    <ul className="list-disc list-inside space-y-1 mb-4 p-4 bg-muted rounded-lg">
                       <li>ราคาต้นทุนสินค้า: <span className="font-bold">250</span> บาท</li>
                       <li>ค่ากล่อง (ค่าใช้จ่ายอื่น): <span className="font-bold">10</span> บาท</li>
                       <li>ต้องการกำไร: <span className="font-bold">80</span> บาท (กำหนดเป็นตัวเลข)</li>
@@ -329,19 +329,19 @@ export default function DocsPage() {
                       <li><span className="font-semibold">กำไรที่ต้องการ:</span> <span className="font-bold">80</span> บาท</li>
                       <li><span className="font-semibold">อัตราค่าธรรมเนียมรวม:</span> 12.84% (แพลตฟอร์ม) + 5% (Affiliate) = <span className="font-bold">17.84%</span> หรือ 0.1784</li>
                       <li><span className="font-semibold">แทนค่าในสูตร:</span>
-                        <div className="font-mono p-3 bg-muted/50 my-2 rounded-md text-xs sm:text-sm">
+                        <div className="font-mono p-3 bg-muted my-2 rounded-md text-xs sm:text-sm">
                           ราคาขาย = (260 + 80 + 20) / (1 - 0.1784)<br/>
                           ราคาขาย = 360 / 0.8216 ≈ <span className="font-bold">438.17</span> บาท
                         </div>
                       </li>
                       <li><span className="font-semibold">พิสูจน์กำไร:</span>
-                        <ul className="list-disc list-inside mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                          <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600">438.17</span> บาท</li>
+                        <ul className="list-disc list-inside mt-2 p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600 dark:text-blue-400">438.17</span> บาท</li>
                            <li>หักส่วนลดร้านค้า: -20.00 บาท (เหลือยอดสำหรับคิดค่าธรรมเนียม <span className="font-bold">418.17</span>)</li>
-                          <li>หักค่าธรรมเนียม Lazada (12.84% ของ 418.17): <span className="text-red-600">-53.69</span> บาท</li>
-                          <li>หักค่าคอม Affiliate (5% ของราคาขาย 438.17): <span className="text-red-600">-21.91</span> บาท</li>
-                          <li>หักต้นทุนรวม: <span className="text-red-600">-260.00</span> บาท</li>
-                           <li><span className="font-bold">กำไรสุทธิ: 438.17 - 20 - 53.69 - 21.91 - 260 = <span className="text-green-600 font-bold text-base">82.57</span> บาท*</span></li>
+                          <li>หักค่าธรรมเนียม Lazada (12.84% ของ 418.17): <span className="text-red-600 dark:text-red-400">-53.69</span> บาท</li>
+                          <li>หักค่าคอม Affiliate (5% ของราคาขาย 438.17): <span className="text-red-600 dark:text-red-400">-21.91</span> บาท</li>
+                          <li>หักต้นทุนรวม: <span className="text-red-600 dark:text-red-400">-260.00</span> บาท</li>
+                           <li><span className="font-bold">กำไรสุทธิ: 438.17 - 20 - 53.69 - 21.91 - 260 = <span className="text-green-600 dark:text-green-400 font-bold text-base">82.57</span> บาท*</span></li>
                         </ul>
                          <p className="text-xs text-muted-foreground mt-1">*กำไรที่ได้อาจสูงกว่าที่คาดการณ์เล็กน้อยเนื่องจากการปัดเศษทศนิยม</p>
                       </li>
@@ -352,7 +352,7 @@ export default function DocsPage() {
                   <AccordionTrigger>ตัวอย่าง: ขายแก้วน้ำบน TikTok Shop</AccordionTrigger>
                    <AccordionContent className="text-sm">
                     <p className="font-semibold mb-2">สถานการณ์:</p>
-                    <ul className="list-disc list-inside space-y-1 mb-4 p-4 bg-muted/30 rounded-lg">
+                    <ul className="list-disc list-inside space-y-1 mb-4 p-4 bg-muted rounded-lg">
                       <li>ราคาต้นทุนสินค้า: <span className="font-bold">80</span> บาท</li>
                       <li>ไม่มีค่าใช้จ่ายอื่น</li>
                       <li>ต้องการกำไร: <span className="font-bold">25%</span> (ของต้นทุนสินค้า = 20 บาท)</li>
@@ -366,18 +366,18 @@ export default function DocsPage() {
                       <li><span className="font-semibold">กำไรที่ต้องการ:</span> 80 * 25% = <span className="font-bold">20</span> บาท</li>
                        <li><span className="font-semibold">อัตราค่าธรรมเนียมรวม:</span> <span className="font-bold">8.56%</span> หรือ 0.0856</li>
                       <li><span className="font-semibold">แทนค่าในสูตร:</span>
-                        <div className="font-mono p-3 bg-muted/50 my-2 rounded-md text-xs sm:text-sm">
+                        <div className="font-mono p-3 bg-muted my-2 rounded-md text-xs sm:text-sm">
                           ราคาขาย = (ต้นทุนรวม + กำไร + ส่วนลด) / (1 - อัตราค่าธรรมเนียมรวม)<br/>
                           ราคาขาย = (80 + 20 + 0) / (1 - 0.0856)<br/>
                           ราคาขาย = 100 / 0.9144 ≈ <span className="font-bold">109.36</span> บาท
                         </div>
                       </li>
                       <li><span className="font-semibold">พิสูจน์กำไร:</span>
-                        <ul className="list-disc list-inside mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                          <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600">109.36</span> บาท</li>
-                          <li>หักค่าธรรมเนียม TikTok (8.56% ของ 109.36): <span className="text-red-600">-9.36</span> บาท</li>
-                          <li>หักต้นทุนรวม: <span className="text-red-600">-80.00</span> บาท</li>
-                           <li><span className="font-bold">กำไรสุทธิ: 109.36 - 9.36 - 80 = <span className="text-green-600 font-bold text-base">20.00</span> บาท</span></li>
+                        <ul className="list-disc list-inside mt-2 p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600 dark:text-blue-400">109.36</span> บาท</li>
+                          <li>หักค่าธรรมเนียม TikTok (8.56% ของ 109.36): <span className="text-red-600 dark:text-red-400">-9.36</span> บาท</li>
+                          <li>หักต้นทุนรวม: <span className="text-red-600 dark:text-red-400">-80.00</span> บาท</li>
+                           <li><span className="font-bold">กำไรสุทธิ: 109.36 - 9.36 - 80 = <span className="text-green-600 dark:text-green-400 font-bold text-base">20.00</span> บาท</span></li>
                         </ul>
                       </li>
                     </ol>
@@ -386,7 +386,7 @@ export default function DocsPage() {
               </Accordion>
             </section>
             
-            <Alert variant="default" className="mt-4 bg-muted/50 border-transparent">
+            <Alert variant="default" className="mt-4">
               <Info className="h-4 w-4" />
               <AlertTitle>ข้อจำกัดความรับผิดชอบ</AlertTitle>
               <AlertDescription>

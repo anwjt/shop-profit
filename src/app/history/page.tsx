@@ -91,7 +91,7 @@ export default function HistoryPage() {
   return (
     <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-8">
       <div className="w-full max-w-4xl space-y-6">
-        <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20">
+        <Card className="w-full shadow-lg">
           <CardHeader className="text-center">
             <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
               <History className="w-8 h-8" />
@@ -105,17 +105,17 @@ export default function HistoryPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {daysRemaining !== null && (
-              <Alert variant="default" className="bg-yellow-100/50 border-yellow-300">
-                  <Timer className="h-4 w-4 text-yellow-800" />
-                  <AlertTitle className="text-yellow-800">ข้อมูลจะถูกล้างอัตโนมัติ</AlertTitle>
-                  <AlertDescription className="text-yellow-700">
+              <Alert variant="default" className="bg-yellow-100/80 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-800">
+                  <Timer className="h-4 w-4 text-yellow-800 dark:text-yellow-300" />
+                  <AlertTitle className="text-yellow-800 dark:text-yellow-300">ข้อมูลจะถูกล้างอัตโนมัติ</AlertTitle>
+                  <AlertDescription className="text-yellow-700 dark:text-yellow-400">
                     ประวัติการคำนวณจะถูกล้างในอีกประมาณ {daysRemaining} วัน เพื่อเพิ่มพื้นที่จัดเก็บข้อมูล
                   </AlertDescription>
               </Alert>
             )}
             {history.length > 0 ? (
                 <>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-lg border">
                         <Table>
                         <TableHeader>
                             <TableRow>
@@ -134,8 +134,8 @@ export default function HistoryPage() {
                                 <TableCell>{getPlatformName(item.platform)}</TableCell>
                                 <TableCell className="text-right">{formatPrice(item.totalCost)}</TableCell>
                                 <TableCell className="text-right font-bold">{formatPrice(item.sellingPrice)}</TableCell>
-                                <TableCell className="text-right text-red-600">{`-${formatPrice(item.platformFeeAmount)}`}</TableCell>
-                                <TableCell className="text-right text-green-600">{formatPrice(item.profit)}</TableCell>
+                                <TableCell className="text-right text-red-600 dark:text-red-400">{`-${formatPrice(item.platformFeeAmount)}`}</TableCell>
+                                <TableCell className="text-right text-green-600 dark:text-green-400">{formatPrice(item.profit)}</TableCell>
                             </TableRow>
                             ))}
                         </TableBody>
@@ -147,7 +147,7 @@ export default function HistoryPage() {
                     </Button>
                 </>
             ) : (
-                <Alert className="bg-muted/50 border-transparent">
+                <Alert>
                     <Info className="h-4 w-4" />
                     <AlertTitle>ไม่พบประวัติการคำนวณ</AlertTitle>
                     <AlertDescription>
