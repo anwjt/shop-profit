@@ -92,6 +92,7 @@ const stockItemFormSchema = z.object({
 type StockItemFormData = z.infer<typeof stockItemFormSchema>;
 
 const platformCategories = getPlatformCategories();
+const platforms = Object.keys(platformCategories);
 
 const ResultDisplay = ({ item }: { item: StockItem | null }) => {
     const [noProfit, setNoProfit] = useState(false);
@@ -101,7 +102,7 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
     const calculationResult = useMemo(() => {
         if (!item || !item.platform) return null;
 
-        const platformToCalculate = item.platform.toLowerCase();
+        const platformToCalculate = item.platform.toLowerCase().replace(/\s/g, '-');
         
         let profitValue: { profitMargin?: number; profitAmount?: number } = { profitMargin: 20 };
 
@@ -491,7 +492,7 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                               </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleOpenForm(item)} disabled={true} title="การแก้ไขแบบ Multi-SKU จะพร้อมในเร็วๆ นี้">
+                              <DropdownMenuItem disabled={true} title="การแก้ไขแบบ Multi-SKU จะพร้อมในเร็วๆ นี้">
                                   <Edit className="mr-2 h-4 w-4" />
                                   <span>แก้ไข (เร็วๆ นี้)</span>
                               </DropdownMenuItem>
@@ -572,9 +573,9 @@ export default function ProductDetailPage({ params }: { params: { name: string }
             <Form {...form}>
               <form onSubmit={handleSubmit(handleFormSubmit)}>
                   <DialogHeader>
-                      <DialogTitle>{editingItem ? 'แก้ไข SKU' : 'เพิ่ม SKU ใหม่'}</DialogTitle>
+                      <DialogTitle>เพิ่ม SKU ใหม่</DialogTitle>
                       <DialogDescription>
-                         {editingItem ? 'แก้ไขรายละเอียด SKU' : `เพิ่ม SKU ใหม่สำหรับสินค้า "${productName}"`}
+                         {`เพิ่ม SKU ใหม่สำหรับสินค้า "${productName}"`}
                       </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
@@ -588,13 +589,13 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="price" className="text-right">ต้นทุน</Label>
                           <div className="col-span-3">
-                             <Input id="price" type="number" step="0.01" {...register('price')} disabled={!editingItem} />
+                             <Input id="price" type="number" step="0.01" {...register('price')} disabled />
                           </div>
                       </div>
                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
                           <div className="col-span-3">
-                              <Select onValueChange={(value) => setValue('category', value)} value={watch('category')} disabled={!editingItem}>
+                              <Select onValueChange={(value) => setValue('category', value)} value={watch('category')} disabled>
                                   <SelectTrigger>
                                       <SelectValue placeholder="เลือกหมวดหมู่" />
                                   </SelectTrigger>
@@ -630,12 +631,12 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                                     defaultValue={field.value}
                                     className="flex flex-wrap gap-4 mt-2"
                                   >
-                                    {Object.keys(platformCategories).map((platform) => (
+                                    {platforms.map((platform) => (
                                       <FormItem key={platform} className="flex items-center space-x-2 space-y-0">
                                         <FormControl>
-                                          <RadioGroupItem value={platform.replace(/\s/g, '-').toLowerCase()} id={`${field.name}-${platform}`} />
+                                          <RadioGroupItem value={platform.charAt(0).toUpperCase() + platform.slice(1).replace('-',' ')} id={`${field.name}-${platform}`} />
                                         </FormControl>
-                                        <Label htmlFor={`${field.name}-${platform}`}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Label>
+                                        <Label htmlFor={`${field.name}-${platform}`}>{platform.charAt(0).toUpperCase() + platform.slice(1).replace('-',' ')}</Label>
                                       </FormItem>
                                     ))}
                                   </RadioGroup>
@@ -643,21 +644,21 @@ export default function ProductDetailPage({ params }: { params: { name: string }
                               />
                                {errors.skus?.[index]?.platform && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.platform?.message}</p>}
                             </div>
-                            {index < fields.length - 1 && !editingItem && <hr className='my-4'/>}
+                            {index < fields.length - 1 && <hr className='my-4'/>}
                           </div>
                         ))}
-                        {!editingItem &&
-                          <Button type="button" variant="outline" size="sm" onClick={() => append({ sku: '', platform: '' })}>
+                        
+                        <Button type="button" variant="outline" size="sm" onClick={() => append({ sku: '', platform: '' })}>
                             <PlusCircle className="mr-2 h-4 w-4" /> เพิ่ม SKU
-                          </Button>
-                        }
+                        </Button>
+                        
                       </div>
                   </div>
                   <DialogFooter>
                       <DialogClose asChild>
                           <Button type="button" variant="ghost">ยกเลิก</Button>
                       </DialogClose>
-                      <Button type="submit" disabled={editingItem !== null}>{editingItem ? 'บันทึกการเปลี่ยนแปลง' : 'สร้าง SKU'}</Button>
+                      <Button type="submit">สร้าง SKU</Button>
                   </DialogFooter>
               </form>
             </Form>
