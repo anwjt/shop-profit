@@ -555,5 +555,3 @@ export default function NotionTablePage() {
     </>
   );
 }
-
-    
