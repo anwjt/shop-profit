@@ -83,6 +83,7 @@ export default function NotionTablePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [platformFilter, setPlatformFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -140,7 +141,7 @@ export default function NotionTablePage() {
         return acc;
     }, {} as { [name: string]: GroupedStockItem });
 
-    return Object.values(grouped);
+    return Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name));
   }, [data]);
 
   const filteredData = useMemo(() => {
@@ -184,6 +185,7 @@ export default function NotionTablePage() {
   };
 
   const handleFormSubmit = async (formData: FormData) => {
+    setIsSubmitting(true);
     try {
         const { name, price, category } = formData;
         
@@ -219,6 +221,8 @@ export default function NotionTablePage() {
 
     } catch (e: any) {
         toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -232,9 +236,9 @@ export default function NotionTablePage() {
                     <Skeleton className="h-5 w-3/4" />
                 </div>
                 <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-8 w-24" />
                 <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-4" />
             </div>
           ))}
         </div>
@@ -297,7 +301,7 @@ export default function NotionTablePage() {
                       <TableCell className="text-center">{item.skuCount}</TableCell>
                       <TableCell>
                           <div className='text-xs'>
-                            <p className='text-green-600'>ขายแล้ว: {item.soldCount}</p>
+                            <p className='text-green-600 font-medium'>ขายแล้ว: {item.soldCount}</p>
                             <p className='text-muted-foreground'>คงเหลือ: {item.remainingCount}</p>
                           </div>
                       </TableCell>
@@ -536,9 +540,12 @@ export default function NotionTablePage() {
                   </div>
                   <DialogFooter>
                       <DialogClose asChild>
-                          <Button type="button" variant="ghost">ยกเลิก</Button>
+                          <Button type="button" variant="ghost" disabled={isSubmitting}>ยกเลิก</Button>
                       </DialogClose>
-                      <Button type="submit">สร้างสินค้า</Button>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                        {isSubmitting ? 'กำลังสร้าง...' : 'สร้างสินค้า'}
+                      </Button>
                   </DialogFooter>
               </form>
             </Form>

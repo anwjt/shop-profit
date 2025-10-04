@@ -268,14 +268,17 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const params = useParams();
   const productName = useMemo(() => {
-    const name = params?.name;
+    if (!params) return '';
+    const name = params.name;
     return name ? decodeURIComponent(name as string) : '';
   }, [params]);
+
   const [allData, setAllData] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [resultItem, setResultItem] = useState<StockItem | null>(null);
   const { toast } = useToast();
@@ -407,6 +410,7 @@ export default function ProductDetailPage() {
   };
 
   const handleFormSubmit = async (formData: StockItemFormData) => {
+    setIsSubmitting(true);
     try {
         const { name, price, category } = formData;
         
@@ -442,10 +446,13 @@ export default function ProductDetailPage() {
 
     } catch (e: any) {
         toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    } finally {
+        setIsSubmitting(false);
     }
 };
 
   const handleEditFormSubmit = async (data: EditProductFormData) => {
+    setIsSubmitting(true);
     try {
         const itemIdsToUpdate = productData.map(item => ({ id: item.id, ...data }));
 
@@ -472,10 +479,13 @@ export default function ProductDetailPage() {
 
     } catch (e: any) {
         toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
   const updateItemStatus = async (item: StockItem, newStatus: StockItem['status'], note?: string) => {
+    setIsSubmitting(true);
     try {
         const payload: { id: string; status: StockItem['status']; ext?: string } = {
             id: item.id,
@@ -498,6 +508,8 @@ export default function ProductDetailPage() {
         toast({ title: "อัปเดตสถานะสำเร็จ", description: `สถานะของ "${item.name}" ถูกเปลี่ยนเป็น "${newStatus}"` });
     } catch (e: any) {
         toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    } finally {
+        setIsSubmitting(false);
     }
   };
   
@@ -520,6 +532,7 @@ export default function ProductDetailPage() {
 
 
   const handleDelete = async (itemId: string) => {
+    setIsSubmitting(true);
     try {
         const response = await fetch('/api/notion', {
             method: 'DELETE',
@@ -537,6 +550,8 @@ export default function ProductDetailPage() {
 
     } catch(e: any) {
         toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -550,9 +565,9 @@ export default function ProductDetailPage() {
                 <div className="space-y-2 flex-grow">
                     <Skeleton className="h-4 w-3/4" />
                 </div>
-                <Skeleton className="h-6 w-24 rounded-full" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-8" />
             </div>
           ))}
         </div>
@@ -609,7 +624,8 @@ export default function ProductDetailPage() {
                     <TableCell className="text-center">
                         <div className="flex justify-center">
                             {item.status === 'รอขาย' ? (
-                                <Button variant="secondary" size="sm" onClick={() => handleStatusChangeClick(item)}>
+                                <Button variant="secondary" size="sm" onClick={() => handleStatusChangeClick(item)} disabled={isSubmitting}>
+                                    {isSubmitting && itemToRevert?.id !== item.id && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
                                     <ShoppingCart className="mr-2 h-4 w-4" /> รอขาย
                                 </Button>
                             ) : (
@@ -623,7 +639,7 @@ export default function ProductDetailPage() {
                     <TableCell className="text-right">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isSubmitting}>
                                     <span className="sr-only">Open menu</span>
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
@@ -649,7 +665,10 @@ export default function ProductDetailPage() {
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                         <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDelete(item.id)} className='bg-destructive hover:bg-destructive/90'>ยืนยันการลบ</AlertDialogAction>
+                                        <AlertDialogAction onClick={() => handleDelete(item.id)} disabled={isSubmitting} className='bg-destructive hover:bg-destructive/90'>
+                                            {isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                                            ยืนยันการลบ
+                                        </AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
@@ -734,7 +753,7 @@ export default function ProductDetailPage() {
                 <Package className="w-8 h-8" />
               </div>
               <CardTitle className="font-headline text-3xl">
-                {productName}
+                {productName || <Skeleton className="h-8 w-64 mx-auto" />}
               </CardTitle>
               <CardDescription>
                 รายการ SKU ทั้งหมดสำหรับสินค้าชิ้นนี้
@@ -872,9 +891,12 @@ export default function ProductDetailPage() {
                   </div>
                   <DialogFooter>
                       <DialogClose asChild>
-                          <Button type="button" variant="ghost">ยกเลิก</Button>
+                          <Button type="button" variant="ghost" disabled={isSubmitting}>ยกเลิก</Button>
                       </DialogClose>
-                      <Button type="submit">สร้าง SKU</Button>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                        {isSubmitting ? 'กำลังสร้าง...' : 'สร้าง SKU'}
+                      </Button>
                   </DialogFooter>
               </form>
             </Form>
@@ -908,9 +930,10 @@ export default function ProductDetailPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="ghost">ยกเลิก</Button></DialogClose>
-                        <Button type="submit" disabled={editForm.formState.isSubmitting}>
-                            {editForm.formState.isSubmitting ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
+                        <DialogClose asChild><Button type="button" variant="ghost" disabled={isSubmitting}>ยกเลิก</Button></DialogClose>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                            {isSubmitting ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
                         </Button>
                     </DialogFooter>
                 </form>
@@ -949,8 +972,11 @@ export default function ProductDetailPage() {
                             />
                         </div>
                         <AlertDialogFooter>
-                            <AlertDialogCancel onClick={() => setItemToRevert(null)}>ยกเลิก</AlertDialogCancel>
-                            <AlertDialogAction type="submit">ยืนยัน</AlertDialogAction>
+                            <AlertDialogCancel onClick={() => setItemToRevert(null)} disabled={isSubmitting}>ยกเลิก</AlertDialogCancel>
+                            <AlertDialogAction type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                                ยืนยัน
+                            </AlertDialogAction>
                         </AlertDialogFooter>
                     </form>
                 </Form>
@@ -959,5 +985,3 @@ export default function ProductDetailPage() {
     </>
   );
 }
-
-    
