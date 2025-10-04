@@ -25,14 +25,29 @@ const databaseId = process.env.NOTION_DATABASE_ID!;
 // This function converts Notion's complex page object into a simpler StockItem object.
 function pageToStockItem(page: any): StockItem | null {
   try {
-    const name = page.properties[PROPERTY_NAMES.name]?.title?.[0]?.plain_text ?? 'Untitled';
-    const stock = page.properties[PROPERTY_NAMES.stock]?.number ?? 0;
-    const price = page.properties[PROPERTY_NAMES.price]?.number ?? 0;
-    const status = page.properties[PROPERTY_NAMES.status]?.select?.name ?? 'Out of Stock';
-
-    if (typeof stock !== 'number' || typeof price !== 'number') {
-        return null;
+    // Helper to get plain text from different property types
+    const getPlainText = (property: any, type: 'rich_text' | 'title' | 'select') => {
+        if (!property) return '';
+        if (type === 'select') return property.select?.name ?? '';
+        const arr = property[type];
+        if (arr && arr.length > 0) {
+            return arr[0]?.plain_text ?? '';
+        }
+        return '';
+    };
+    
+    const name = getPlainText(page.properties[PROPERTY_NAMES.name], 'title');
+    const stockText = getPlainText(page.properties[PROPERTY_NAMES.stock], 'rich_text');
+    const priceText = getPlainText(page.properties[PROPERTY_NAMES.price], 'rich_text');
+    
+    // Status can be 'select' or 'rich_text'
+    let status = getPlainText(page.properties[PROPERTY_NAMES.status], 'select');
+    if (!status) {
+       status = getPlainText(page.properties[PROPERTY_NAMES.status], 'rich_text');
     }
+
+    const stock = Number(stockText) || 0;
+    const price = Number(priceText) || 0;
 
     const validStatus = ['In Stock', 'Low Stock', 'Out of Stock'].includes(status) 
         ? status as StockItem['status'] 
@@ -90,8 +105,10 @@ export async function POST(req: NextRequest) {
       parent: { database_id: databaseId },
       properties: {
         [PROPERTY_NAMES.name]: { title: [{ text: { content: name } }] },
-        [PROPERTY_NAMES.stock]: { number: stock },
-        [PROPERTY_NAMES.price]: { number: price },
+        // Send data as strings inside rich_text objects
+        [PROPERTY_NAMES.stock]: { rich_text: [{ text: { content: String(stock) } }] },
+        [PROPERTY_NAMES.price]: { rich_text: [{ text: { content: String(price) } }] },
+        // Try to create as select, but have a fallback to rich_text if you change the type
         [PROPERTY_NAMES.status]: { select: { name: status } },
       },
     });
@@ -102,7 +119,14 @@ export async function POST(req: NextRequest) {
   } catch (error: any)
 {
     console.error('Notion API Error (POST):', error);
-    return NextResponse.json({ error: error.body?.message || error.message || 'Failed to create item in Notion.' }, { status: 500 });
+    if (error.code === 'validation_error') {
+        const message = error.body?.message || 'Validation error. Check if property types in Notion match the app.';
+        if (message.includes("is not a valid select option")) {
+             return NextResponse.json({ error: `"${error.body.message.split('"')[1]}" is not a valid option for the 'Status' column in Notion. Please add it as an option in your database.` }, { status: 400 });
+        }
+        return NextResponse.json({ error: message }, { status: 400 });
+    }
+    return NextResponse.json({ error: error.message || 'Failed to create item in Notion.' }, { status: 500 });
   }
 }
 
@@ -117,8 +141,9 @@ export async function PATCH(req: NextRequest) {
       // Construct the properties object for Notion API
       const properties: any = {};
       if (data.name) properties[PROPERTY_NAMES.name] = { title: [{ text: { content: data.name } }] };
-      if (data.stock !== undefined) properties[PROPERTY_NAMES.stock] = { number: data.stock };
-      if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
+      // Send data as strings inside rich_text objects
+      if (data.stock !== undefined) properties[PROPERTY_NAMES.stock] = { rich_text: [{ text: { content: String(data.stock) } }] };
+      if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { rich_text: [{ text: { content: String(data.price) } }] };
       if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
   
       const response = await notion.pages.update({
@@ -131,7 +156,14 @@ export async function PATCH(req: NextRequest) {
 
     } catch (error: any) {
       console.error('Notion API Error (PATCH):', error);
-      return NextResponse.json({ error: error.body?.message || error.message || 'Failed to update item in Notion.' }, { status: 500 });
+      if (error.code === 'validation_error') {
+        const message = error.body?.message || 'Validation error.';
+         if (message.includes("is not a valid select option")) {
+             return NextResponse.json({ error: `"${error.body.message.split('"')[1]}" is not a valid option for the 'Status' column in Notion. Please add it as an option in your database.` }, { status: 400 });
+        }
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+      return NextResponse.json({ error: error.message || 'Failed to update item in Notion.' }, { status: 500 });
     }
 }
 
@@ -155,3 +187,5 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: error.body?.message || error.message || 'Failed to delete item in Notion.' }, { status: 500 });
     }
 }
+
+    
