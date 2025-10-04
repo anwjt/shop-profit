@@ -704,7 +704,12 @@ export default function NotionTablePage() {
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="status" className="text-right">สถานะ</Label>
                         <div className="col-span-3">
-                            <Select onValueChange={(value) => setValue('status', value as StockItem['status'])} defaultValue={editingItem?.status || 'รอขาย'}>
+                            <Select 
+                                onValueChange={(value) => setValue('status', value as StockItem['status'])} 
+                                value={watch('status')}
+                                defaultValue={editingItem?.status || 'รอขาย'}
+                                disabled={!editingItem}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder="เลือกสถานะ" />
                                 </SelectTrigger>
@@ -734,6 +739,8 @@ export default function NotionTablePage() {
   );
 }
     
+    
+
     
 
     
