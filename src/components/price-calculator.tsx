@@ -134,7 +134,12 @@ const getPsychologicalPrice = (price: number | undefined) => {
     }
 }
 
-export default function PriceCalculator() {
+interface PriceCalculatorProps {
+  isStandalone?: boolean;
+  initialCost?: number;
+}
+
+export default function PriceCalculator({ isStandalone = true, initialCost }: PriceCalculatorProps) {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
@@ -142,8 +147,12 @@ export default function PriceCalculator() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      platform: '', cost: undefined, category: '',
-      otherCosts: [], profitMargin: undefined, discount: undefined,
+      platform: '', 
+      cost: initialCost ?? undefined, 
+      category: '',
+      otherCosts: [], 
+      profitMargin: undefined, 
+      discount: undefined,
       affiliateCommission: undefined,
     },
   });
@@ -151,6 +160,13 @@ export default function PriceCalculator() {
   const { fields, append, remove } = useFieldArray({
     control: form.control, name: "otherCosts",
   });
+
+  useEffect(() => {
+    if (initialCost) {
+      form.setValue('cost', initialCost);
+    }
+  }, [initialCost, form]);
+
 
   const selectedPlatform = form.watch('platform');
 
@@ -173,6 +189,7 @@ export default function PriceCalculator() {
   }
   
   const saveToHistory = (resultToSave: CalculationResult) => {
+    if (!isStandalone) return;
     try {
       const historyKey = 'calculationHistory';
       const historyDataString = localStorage.getItem(historyKey);
@@ -247,47 +264,22 @@ export default function PriceCalculator() {
   }
 
   const handleClear = () => {
-    form.reset();
+    form.reset({
+        ...form.getValues(),
+        cost: isStandalone ? undefined : initialCost,
+        otherCosts: [],
+        profitMargin: undefined,
+        discount: undefined,
+        affiliateCommission: undefined
+    });
     setResult(null);
   };
-
-  return (
-    <div className="w-full max-w-4xl space-y-4">
-      <Card className="w-full shadow-lg relative overflow-hidden">
-        <div className="absolute top-4 right-4 flex items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
-                <Link href="/notion-table">
-                    <Table className="mr-2 h-4 w-4" />
-                    Notion Table
-                </Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-                <Link href="/history">
-                    <History className="mr-2 h-4 w-4" />
-                    ประวัติ
-                </Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-                <Link href="/docs">
-                    <BookMarked className="mr-2 h-4 w-4" />
-                    คู่มือ
-                </Link>
-            </Button>
-        </div>
-        <CardHeader className="text-center">
-          <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
-            <Calculator className="w-8 h-8" />
-          </div>
-          <CardTitle className="font-headline text-3xl">คำนวณราคาขาย (สำหรับร้านค้าทั่วไป)</CardTitle>
-          <CardDescription>
-            คำนวณราคาขายสินค้าของคุณเพื่อให้แน่ใจว่าได้กำไรตามที่ต้องการ
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+  
+  const cardContent = (
+      <>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {/* Form Fields... */}
                 <FormField
                   control={form.control}
                   name="platform"
@@ -329,10 +321,6 @@ export default function PriceCalculator() {
                             if (!selectedPlatform) return null;
                             const platformCategory = PLATFORM_FEES[selectedPlatform]?.[cat];
                             if (!platformCategory) return null;
-                            let feeLabel = `~${platformCategory.fee.toFixed(2)}%`;
-                            if (selectedPlatform === 'shopee') feeLabel = `${feeLabel} (รวม VAT และค่าธุรกรรม)`;
-                            else if (selectedPlatform === 'lazada') feeLabel = `~${(platformCategory.fee + (platformCategory.paymentFee || 0)).toFixed(2)}%`;
-                            else if (platformCategory.orderFee) feeLabel = `~${(platformCategory.fee + platformCategory.orderFee).toFixed(2)}%`
                             return (<SelectItem key={cat} value={cat}>{platformCategory.name}</SelectItem>)
                           })}
                         </SelectContent>
@@ -350,7 +338,7 @@ export default function PriceCalculator() {
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
                         <FormControl>
-                          <Input type="number" placeholder="กรอกราคาต้นทุน" className="pl-8" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                          <Input type="number" placeholder="กรอกราคาต้นทุน" className="pl-8" {...field} disabled={!isStandalone} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -398,26 +386,27 @@ export default function PriceCalculator() {
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+      </>
+  )
 
+  const resultDisplay = (
+    <>
       {isLoading && (
-        <Card className="mt-8 w-full shadow-lg">
-          <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+         <Card className="mt-8 w-full shadow-lg">
+           <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
+           <CardContent className="space-y-4">
+             <div className="space-y-4">
+               <Skeleton className="h-24 w-full" />
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <Skeleton className="h-24 w-full" />
+                 <Skeleton className="h-24 w-full" />
+               </div>
+             </div>
+           </CardContent>
+         </Card>
       )}
-
       {result && !isLoading && (
-        <>
+        <div className="space-y-4">
           <Card className="w-full shadow-lg">
             <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -464,8 +453,59 @@ export default function PriceCalculator() {
               </CardContent>
             </Card>
           )}
-        </>
+        </div>
       )}
+    </>
+  );
+
+  if (!isStandalone) {
+      return (
+          <div className="w-full space-y-4">
+              {cardContent}
+              {resultDisplay}
+          </div>
+      )
+  }
+
+  return (
+    <div className="w-full max-w-4xl space-y-4">
+      <Card className="w-full shadow-lg relative overflow-hidden">
+        {isStandalone && (
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/notion-table">
+                        <Table className="mr-2 h-4 w-4" />
+                        Notion Table
+                    </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/history">
+                        <History className="mr-2 h-4 w-4" />
+                        ประวัติ
+                    </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/docs">
+                        <BookMarked className="mr-2 h-4 w-4" />
+                        คู่มือ
+                    </Link>
+                </Button>
+            </div>
+        )}
+        <CardHeader className="text-center">
+          <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
+            <Calculator className="w-8 h-8" />
+          </div>
+          <CardTitle className="font-headline text-3xl">คำนวณราคาขาย (สำหรับร้านค้าทั่วไป)</CardTitle>
+          <CardDescription>
+            คำนวณราคาขายสินค้าของคุณเพื่อให้แน่ใจว่าได้กำไรตามที่ต้องการ
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {cardContent}
+        </CardContent>
+      </Card>
+      {resultDisplay}
     </div>
   );
 }

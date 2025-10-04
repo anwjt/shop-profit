@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import Image from 'next/image';
 import {
   Card,
   CardContent,
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,8 +51,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
-  } from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -60,16 +60,35 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-  } from '@/components/ui/select';
+} from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
+import PriceCalculator from '@/components/price-calculator';
 
+
+const PlatformIcon = ({ platform }: { platform: string }) => {
+    switch (platform) {
+      case 'Shopee':
+        return <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/960px-Shopee.svg.png" alt="Shopee" width={24} height={24} className="min-w-[24px]" />;
+      case 'TikTok Shop':
+        return <Image src="https://upload.wikimedia.org/wikipedia/en/thumb/a/a9/TikTok_logo.svg/500px-TikTok_logo.svg.png" alt="TikTok Shop" width={24} height={24} className="min-w-[24px]" />;
+      case 'Lazada':
+        return (
+            <div className="w-6 h-6 flex items-center justify-center bg-blue-600 rounded-sm min-w-[24px]">
+                <span className="font-bold text-white text-lg italic">L</span>
+            </div>
+        );
+      default:
+        return null;
+    }
+};
 
 export type StockItem = {
   id: string;
-  name: string;
+  name:string;
   stock: number;
   price: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  platform: string;
 };
 
 const stockItemSchema = z.object({
@@ -77,6 +96,7 @@ const stockItemSchema = z.object({
     stock: z.coerce.number().min(0, 'สต็อกต้องเป็นตัวเลขไม่ติดลบ'),
     price: z.coerce.number().min(0, 'ราคาต้องเป็นตัวเลขไม่ติดลบ'),
     status: z.enum(['In Stock', 'Low Stock', 'Out of Stock']),
+    platform: z.string().min(1, "กรุณาเลือกแพลตฟอร์ม"),
 });
 
 type StockItemFormData = z.infer<typeof stockItemSchema>;
@@ -101,12 +121,15 @@ export default function NotionTablePage() {
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
+  const [isCalcOpen, setIsCalcOpen] = useState(false);
+  const [calcItem, setCalcItem] = useState<StockItem | null>(null);
   const { toast } = useToast();
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<StockItemFormData>({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<StockItemFormData>({
     resolver: zodResolver(stockItemSchema),
     defaultValues: {
-        status: 'In Stock'
+        status: 'In Stock',
+        platform: 'Shopee',
     }
   });
 
@@ -140,11 +163,17 @@ export default function NotionTablePage() {
             stock: item.stock,
             price: item.price,
             status: item.status,
+            platform: item.platform,
         });
     } else {
-        reset({ name: '', stock: 0, price: 0, status: 'In Stock' });
+        reset({ name: '', stock: 0, price: 0, status: 'In Stock', platform: 'Shopee' });
     }
     setIsFormOpen(true);
+  };
+
+  const handleOpenCalc = (item: StockItem) => {
+    setCalcItem(item);
+    setIsCalcOpen(true);
   };
 
   const handleFormSubmit = async (formData: StockItemFormData) => {
@@ -170,7 +199,7 @@ export default function NotionTablePage() {
         setData(data.map(item => (item.id === result.id ? result : item)));
         toast({ title: "✅ อัปเดตสำเร็จ", description: `สินค้า "${result.name}" ถูกแก้ไขแล้ว` });
       } else {
-        setData([result, ...data]);
+        setData([result, ...data].sort((a, b) => a.name.localeCompare(b.name)));
         toast({ title: "✅ เพิ่มสินค้าสำเร็จ", description: `"${result.name}" ถูกเพิ่มในรายการแล้ว` });
       }
 
@@ -207,6 +236,7 @@ export default function NotionTablePage() {
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
              <div key={i} className="flex items-center space-x-4 p-4">
+                <Skeleton className="h-6 w-6" />
                 <div className="space-y-2 flex-grow">
                     <Skeleton className="h-4 w-3/4" />
                 </div>
@@ -253,6 +283,7 @@ export default function NotionTablePage() {
         <UiTable>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">แพลตฟอร์ม</TableHead>
               <TableHead>ชื่อสินค้า</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-right">จำนวนในสต็อก</TableHead>
@@ -263,6 +294,11 @@ export default function NotionTablePage() {
           <TableBody>
             {data.map((item) => (
               <TableRow key={item.id}>
+                <TableCell>
+                    <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => handleOpenCalc(item)}>
+                        <PlatformIcon platform={item.platform}/>
+                    </Button>
+                </TableCell>
                 <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
@@ -316,7 +352,7 @@ export default function NotionTablePage() {
   return (
     <>
       <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-8">
-        <div className="w-full max-w-4xl space-y-6">
+        <div className="w-full max-w-5xl space-y-6">
           <Card className="w-full shadow-lg">
             <CardHeader className="text-center">
               <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
@@ -343,7 +379,7 @@ export default function NotionTablePage() {
                 <Button asChild>
                     <Link href="/">
                       <ArrowLeft className="mr-2 h-4 w-4" />
-                      กลับไปที่เครื่องคำนวณ
+                      กลับไปหน้าหลัก
                     </Link>
                   </Button>
               </div>
@@ -368,6 +404,22 @@ export default function NotionTablePage() {
                         <div className="col-span-3">
                             <Input id="name" {...register('name')} className={errors.name ? 'border-destructive' : ''} />
                             {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
+                        </div>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="platform" className="text-right">แพลตฟอร์ม</Label>
+                        <div className="col-span-3">
+                            <Select onValueChange={(value) => setValue('platform', value)} defaultValue={editingItem?.platform || 'Shopee'}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="เลือกแพลตฟอร์ม" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Shopee">Shopee</SelectItem>
+                                    <SelectItem value="Lazada">Lazada</SelectItem>
+                                    <SelectItem value="TikTok Shop">TikTok Shop</SelectItem>
+                                </SelectContent>
+                            </Select>
+                             {errors.platform && <p className="text-xs text-destructive mt-1">{errors.platform.message}</p>}
                         </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -407,6 +459,21 @@ export default function NotionTablePage() {
                     <Button type="submit">{editingItem ? 'บันทึกการเปลี่ยนแปลง' : 'สร้างสินค้า'}</Button>
                 </DialogFooter>
             </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Calculator Dialog */}
+      <Dialog open={isCalcOpen} onOpenChange={setIsCalcOpen}>
+        <DialogContent className="max-w-4xl">
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2"><Calculator /> คำนวณราคาขายสำหรับ "{calcItem?.name}"</DialogTitle>
+                <DialogDescription>
+                    คำนวณราคาขายสำหรับสินค้าชิ้นนี้โดยเฉพาะ ราคาต้นทุนจะถูกดึงมาจากข้อมูลในตาราง
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 max-h-[70vh] overflow-y-auto pr-4">
+               {calcItem && <PriceCalculator initialCost={calcItem.price} />}
+            </div>
         </DialogContent>
       </Dialog>
     </>

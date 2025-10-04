@@ -11,6 +11,7 @@ const PROPERTY_NAMES = {
   stock: 'Stock',
   price: 'Price',
   status: 'Status',
+  platform: 'Platform',
 };
 // ---------------------
 
@@ -31,6 +32,7 @@ function pageToStockItem(page: any): StockItem | null {
     const stock = properties[PROPERTY_NAMES.stock]?.number ?? 0;
     const price = properties[PROPERTY_NAMES.price]?.number ?? 0;
     const status = properties[PROPERTY_NAMES.status]?.select?.name ?? 'Out of Stock';
+    const platform = properties[PROPERTY_NAMES.platform]?.select?.name ?? 'Shopee';
 
     const validStatus = ['In Stock', 'Low Stock', 'Out of Stock'].includes(status) 
         ? status as StockItem['status'] 
@@ -42,6 +44,7 @@ function pageToStockItem(page: any): StockItem | null {
       stock,
       price,
       status: validStatus,
+      platform,
     };
   } catch (error) {
     console.error(`Failed to process page ${page.id}:`, error);
@@ -82,7 +85,7 @@ export async function GET() {
 // POST: Create a new page
 export async function POST(req: NextRequest) {
   try {
-    const { name, stock, price, status } = await req.json();
+    const { name, stock, price, status, platform } = await req.json();
 
     const response = await notion.pages.create({
       parent: { database_id: databaseId },
@@ -91,6 +94,7 @@ export async function POST(req: NextRequest) {
         [PROPERTY_NAMES.stock]: { number: stock },
         [PROPERTY_NAMES.price]: { number: price },
         [PROPERTY_NAMES.status]: { select: { name: status } },
+        [PROPERTY_NAMES.platform]: { select: { name: platform } },
       },
     });
 
@@ -103,7 +107,7 @@ export async function POST(req: NextRequest) {
     if (error.code === 'validation_error') {
         const message = error.body?.message || 'Validation error. Check if property types in Notion match the app.';
         if (message.includes("is not a valid select option")) {
-             return NextResponse.json({ error: `"${error.body.message.split('"')[1]}" is not a valid option for the 'Status' column in Notion. Please add it as an option in your database.` }, { status: 400 });
+             return NextResponse.json({ error: `"${error.body.message.split('"')[1]}" is not a valid option for a 'Select' column in Notion. Please add it as an option in your database.` }, { status: 400 });
         }
         return NextResponse.json({ error: message }, { status: 400 });
     }
@@ -124,6 +128,7 @@ export async function PATCH(req: NextRequest) {
       if (data.stock !== undefined) properties[PROPERTY_NAMES.stock] = { number: data.stock };
       if (data.price !== undefined) properties[PROPERTY_NAMES.price] = { number: data.price };
       if (data.status) properties[PROPERTY_NAMES.status] = { select: { name: data.status } };
+      if (data.platform) properties[PROPERTY_NAMES.platform] = { select: { name: data.platform } };
   
       const response = await notion.pages.update({
         page_id: id,
@@ -138,7 +143,7 @@ export async function PATCH(req: NextRequest) {
       if (error.code === 'validation_error') {
         const message = error.body?.message || 'Validation error.';
          if (message.includes("is not a valid select option")) {
-             return NextResponse.json({ error: `"${error.body.message.split('"')[1]}" is not a valid option for the 'Status' column in Notion. Please add it as an option in your database.` }, { status: 400 });
+             return NextResponse.json({ error: `"${error.body.message.split('"')[1]}" is not a valid option for a 'Select' column in Notion. Please add it as an option in your database.` }, { status: 400 });
         }
         return NextResponse.json({ error: message }, { status: 400 });
       }
