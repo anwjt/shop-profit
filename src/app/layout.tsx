@@ -17,7 +17,7 @@ const kanit = Kanit({
 });
 
 export const metadata: Metadata = {
-  title: 'Shop Profit Calc',
+  title: 'คำนวณการขาย ECOM',
   description: "Calculate your product's selling price for Shopee, Lazada, and TikTok Shop.",
 };
 

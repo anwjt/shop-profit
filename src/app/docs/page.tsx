@@ -27,7 +27,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { ArrowLeft, BookMarked, Calculator, Briefcase, CreditCard, Percent, ShieldCheck, Info } from "lucide-react";
+import { ArrowLeft, BookMarked, Calculator, Briefcase, CreditCard, Percent, ShieldCheck, Info, Table as TableIcon, History, Settings } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -44,7 +44,7 @@ export default function DocsPage() {
               คู่มือการใช้งานและสูตรคำนวณ
             </CardTitle>
             <CardDescription>
-              ทำความเข้าใจวิธีการทำงานของเครื่องมือคำนวณราคาขาย (ฉบับละเอียด)
+              ทำความเข้าใจวิธีการทำงานของเครื่องมือและฟังก์ชันทั้งหมด (ฉบับละเอียด)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -57,28 +57,80 @@ export default function DocsPage() {
                 <li><span className="font-semibold text-foreground">ความแม่นยำสูง:</span> รวมค่าธรรมเนียมที่จำเป็นเกือบทั้งหมด ทำให้คุณเห็นกำไรที่แท้จริง</li>
                 <li><span className="font-semibold text-foreground">ประหยัดเวลา:</span> ไม่ต้องนั่งคำนวณด้วยตนเองที่แสนจะวุ่นวายและเสี่ยงต่อการผิดพลาด</li>
                 <li><span className="font-semibold text-foreground">รับประกันกำไร:</span> ช่วยให้คุณตั้งราคาขายที่ครอบคลุมทุกค่าใช้จ่ายและได้กำไรตามที่ต้องการ</li>
+                 <li><span className="font-semibold text-foreground">จัดการสต็อก:</span> เชื่อมต่อกับ Notion เพื่อจัดการข้อมูลสต็อกและคำนวณราคาได้ในที่เดียว</li>
               </ul>
             </section>
-
+            
             <section>
-              <h2 className="text-xl font-bold mb-2 flex items-center gap-2"><Calculator className="text-primary"/>สูตรการคำนวณหลัก</h2>
-              <p className="text-muted-foreground">
-                หัวใจของการคำนวณคือการหาราคาขาย (Selling Price) ที่เมื่อถูกหักค่าธรรมเนียมทั้งหมดแล้ว จะยังคงเหลือเพียงพอสำหรับต้นทุนและกำไรที่คุณต้องการ สูตรหลักที่ใช้คือ:
-              </p>
-              <div className="mt-4 p-4 bg-muted rounded-lg text-center font-mono text-sm sm:text-base">
-              ราคาขาย = (ต้นทุนรวม + กำไรที่ต้องการ + ส่วนลด) / (1 - อัตราค่าธรรมเนียมรวม)
-              </div>
-               <p className="text-muted-foreground mt-2 text-xs">
-                *ต้นทุนรวม = ราคาต้นทุนสินค้า + ค่าใช้จ่ายอื่นๆ <br/>
-                *อัตราค่าธรรมเนียมรวม = (%ค่าคอมมิชชั่น + %ค่าธรรมเนียมอื่นๆ) + %ค่าคอม Affiliate
-              </p>
-              <div className="mt-4 p-4 bg-yellow-100/80 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-800 text-sm">
-                <h4 className="font-bold text-yellow-800 dark:text-yellow-300">ทำไมต้องบวก "ส่วนลด" เข้าไปในตัวตั้ง?</h4>
-                <p className="text-yellow-700 dark:text-yellow-400 mt-1">
-                  เพราะค่าธรรมเนียมส่วนใหญ่จะถูกคิดจาก "ราคาขายหลังหักส่วนลด" การบวกส่วนลดเข้าไปในสูตรก่อนหาร จะทำให้ราคาขายที่คำนวณได้ "สูงขึ้น" เพื่อชดเชยค่าธรรมเนียมที่จะหายไปจากการให้ส่วนลดนั้นเอง จึงมั่นใจได้ว่าแม้จะลดราคาให้ลูกค้าแล้ว กำไรของคุณจะยังคงเท่าเดิมตามที่ตั้งใจไว้
-                </p>
-              </div>
+              <h2 className="text-2xl font-bold mb-4 border-b pb-2">ฟังก์ชันการทำงานหลัก</h2>
+               <Accordion type="single" collapsible className="w-full" defaultValue="calculator">
+                 <AccordionItem value="calculator">
+                  <AccordionTrigger className="text-lg font-semibold"><Calculator className="mr-2 text-primary"/>เครื่องคำนวณราคา</AccordionTrigger>
+                  <AccordionContent>
+                      <p className="text-muted-foreground mb-4">
+                        หัวใจของการคำนวณคือการหาราคาขาย (Selling Price) ที่เมื่อถูกหักค่าธรรมเนียมทั้งหมดแล้ว จะยังคงเหลือเพียงพอสำหรับต้นทุนและกำไรที่คุณต้องการ สูตรหลักที่ใช้คือ:
+                      </p>
+                      <div className="mt-4 p-4 bg-muted rounded-lg text-center font-mono text-sm sm:text-base">
+                      ราคาขาย = (ต้นทุนรวม + กำไรที่ต้องการ + ส่วนลด) / (1 - อัตราค่าธรรมเนียมรวม)
+                      </div>
+                       <p className="text-muted-foreground mt-2 text-xs">
+                        *ต้นทุนรวม = ราคาต้นทุนสินค้า + ค่าใช้จ่ายอื่นๆ <br/>
+                        *อัตราค่าธรรมเนียมรวม = (%ค่าคอมมิชชั่น + %ค่าธรรมเนียมอื่นๆ) + %ค่าคอม Affiliate
+                      </p>
+                       <div className="mt-4 p-4 bg-yellow-100/80 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-800 text-sm">
+                        <h4 className="font-bold text-yellow-800 dark:text-yellow-300">ทำไมต้องบวก "ส่วนลด" เข้าไปในตัวตั้ง?</h4>
+                        <p className="text-yellow-700 dark:text-yellow-400 mt-1">
+                          เพราะค่าธรรมเนียมส่วนใหญ่จะถูกคิดจาก "ราคาขายหลังหักส่วนลด" การบวกส่วนลดเข้าไปในสูตรก่อนหาร จะทำให้ราคาขายที่คำนวณได้ "สูงขึ้น" เพื่อชดเชยค่าธรรมเนียมที่จะหายไปจากการให้ส่วนลดนั้นเอง จึงมั่นใจได้ว่าแม้จะลดราคาให้ลูกค้าแล้ว กำไรของคุณจะยังคงเท่าเดิมตามที่ตั้งใจไว้
+                        </p>
+                      </div>
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="notion">
+                  <AccordionTrigger className="text-lg font-semibold"><TableIcon className="mr-2 text-primary"/>การจัดการสต็อกด้วย Notion</AccordionTrigger>
+                  <AccordionContent>
+                      <p className="text-muted-foreground mb-4">
+                        คุณสามารถเชื่อมต่อแอปนี้กับฐานข้อมูลใน Notion เพื่อจัดการสต็อกสินค้าของคุณได้โดยตรง ทำให้การคำนวณราคาขายสำหรับสินค้าที่มีอยู่เป็นไปอย่างรวดเร็ว
+                      </p>
+                      <ul className="list-disc list-inside mt-2 space-y-2 text-muted-foreground">
+                        <li><span className="font-semibold text-foreground">ดูภาพรวม:</span> หน้า "Notion Table" จะแสดงรายการสินค้าทั้งหมดที่ถูกจัดกลุ่มตามชื่อ พร้อมจำนวน SKU และสถานะการขาย</li>
+                        <li><span className="font-semibold text-foreground">จัดการ SKU:</span> คุณสามารถเพิ่ม, ลบ, หรือแก้ไขข้อมูลหลัก (ชื่อ, ต้นทุน) และสถานะของสินค้าได้จากในแอป</li>
+                        <li><span className="font-semibold text-foreground">คำนวณราคาทันที:</span> ในหน้ารายละเอียดสินค้า คุณสามารถกดปุ่มคำนวณราคาสำหรับ SKU นั้นๆ ได้ทันทีโดยไม่ต้องกรอกข้อมูลใหม่</li>
+                      </ul>
+                      <p className="text-xs text-muted-foreground mt-4">
+                        *หากต้องการเชื่อมต่อ โปรดดูวิธีการตั้งค่าที่ไฟล์ `README.md`
+                      </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="history">
+                  <AccordionTrigger className="text-lg font-semibold"><History className="mr-2 text-primary"/>ประวัติการคำนวณ</AccordionTrigger>
+                  <AccordionContent>
+                     <p className="text-muted-foreground">
+                       ทุกครั้งที่คุณคำนวณราคาในหน้าหลัก ผลลัพธ์จะถูกบันทึกไว้ในหน้า "ประวัติ" (เข้าถึงได้จากปุ่มบนหน้าแรก) ทำให้คุณสามารถย้อนกลับมาดูรายการคำนวณล่าสุดได้ ข้อมูลนี้จะถูกเก็บไว้ในเบราว์เซอร์ของคุณเป็นเวลา 30 วัน
+                     </p>
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="settings">
+                  <AccordionTrigger className="text-lg font-semibold"><Settings className="mr-2 text-primary"/>การตั้งค่าการแสดงผล</AccordionTrigger>
+                  <AccordionContent>
+                     <p className="text-muted-foreground">
+                       คุณสามารถปรับแต่งหน้าตาของแอปได้โดยกดที่ไอคอนรูปฟันเฟือง (Settings) บนหน้าแรก ซึ่งจะช่วยให้คุณสามารถ:
+                     </p>
+                      <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
+                        <li>เลือกธีมสีระหว่าง "สว่าง" (Light Mode) และ "มืด" (Dark Mode)</li>
+                        <li>เลือกรูปแบบตัวอักษร (Font) ที่ต้องการได้</li>
+                      </ul>
+                       <p className="text-muted-foreground mt-2">
+                         การตั้งค่าที่คุณเลือกจะถูกบันทึกไว้ในเบราว์เซอร์สำหรับการใช้งานครั้งถัดไป
+                       </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+              </Accordion>
             </section>
+            
 
             <section>
               <h2 className="text-xl font-bold mb-2 flex items-center gap-2"><Percent className="text-primary"/>รายละเอียดค่าธรรมเนียมแต่ละแพลตฟอร์ม</h2>
@@ -409,5 +461,3 @@ export default function DocsPage() {
     </main>
   );
 }
-
-    

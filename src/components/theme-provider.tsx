@@ -17,15 +17,7 @@ function useTheme() {
 
     React.useEffect(() => {
         const storedFont = localStorage.getItem(`${THEME_STORAGE_KEY}-font`) || 'sarabun';
-        setFont(storedFont)
-        document.documentElement.style.setProperty(
-            '--font-body',
-            `var(--font-${storedFont})`
-        );
-        document.documentElement.style.setProperty(
-            '--font-headline',
-            `var(--font-${storedFont})`
-        );
+        setFontAndStore(storedFont);
     }, [])
 
     const setFontAndStore = (newFont: string) => {
