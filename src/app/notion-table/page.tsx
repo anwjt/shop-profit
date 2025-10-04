@@ -454,7 +454,7 @@ export default function NotionTablePage() {
                     </Button>
                 </TableCell>
                 <TableCell>{item.sku}</TableCell>
-                <TableCell className="text-right font-bold">{item.price.toFixed(2)}</TableCell>
+                <TableCell className="text-right font-bold">{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                 <TableCell className="text-center">
                     {item.status === 'รอขาย' ? (
                         <Button variant="secondary" size="sm" onClick={() => updateItemStatus(item, 'ขายแล้ว')}>

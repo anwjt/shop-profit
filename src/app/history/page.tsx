@@ -83,7 +83,7 @@ export default function HistoryPage() {
     const names: { [key: string]: string } = {
         shopee: 'Shopee',
         lazada: 'Lazada',
-        tiktok: 'TikTok Shop'
+        'tiktok shop': 'TikTok Shop'
     };
     return names[platformId] || 'N/A';
   }
