@@ -23,6 +23,7 @@ import {
   BookMarked,
   RotateCcw,
   History,
+  Table,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -255,6 +256,12 @@ export default function PriceCalculator() {
       <Card className="w-full shadow-lg bg-card/70 backdrop-blur-sm border-white/20 relative">
         <div className="absolute top-4 right-4 flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
+                <Link href="/notion-table">
+                    <Table className="mr-2 h-4 w-4" />
+                    Notion Table
+                </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
                 <Link href="/history">
                     <History className="mr-2 h-4 w-4" />
                     ประวัติ
@@ -429,3 +436,5 @@ export default function PriceCalculator() {
     </div>
   );
 }
+
+    
