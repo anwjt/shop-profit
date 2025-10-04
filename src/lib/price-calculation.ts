@@ -13,7 +13,7 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
       'fmcg': { name: 'สินค้าอุปโภคบริโภค', fee: 8.0 * 1.07, paymentFee: 3.0 * 1.07 },
       'digital': { name: 'บัตรกำนัลดิจิทัล', fee: 7.0 * 1.07, paymentFee: 3.0 * 1.07 },
     },
-    'tiktok-shop': {
+    'tiktok shop': {
       'fashion': { name: 'สินค้าแฟชั่น', fee: 6.42, orderFee: 3.21 },
       'electronics': { name: 'สินค้าอิเล็กทรอนิกส์', fee: 5.35, orderFee: 3.21 },
       'lifestyle': { name: 'สินค้าไลฟ์สไตล์', fee: 5.35, orderFee: 3.21 },
