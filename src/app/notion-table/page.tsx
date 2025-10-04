@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Select,
     SelectContent,
@@ -98,74 +99,144 @@ const getStatusVariant = (status: StockItem['status']) => {
 
 const platformCategories = getPlatformCategories();
 
-const ResultDisplay = ({ result, title }: { result: CalculationResult | null; title: string }) => (
-    <DialogContent className="max-w-2xl">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <Calculator /> {title}
-        </DialogTitle>
-        <DialogDescription>
-          ผลการคำนวณราคาขายสำหรับสินค้าชิ้นนี้บนแพลตฟอร์มที่เลือก (กำไร 20%, ไม่มีส่วนลด/ค่าใช้จ่ายอื่น)
-        </DialogDescription>
-      </DialogHeader>
-      {result ? (
-        <div className="py-4 max-h-[70vh] overflow-y-auto pr-4 space-y-4">
-            <div className="text-center p-6 bg-muted rounded-lg">
-            <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย</p>
-            <p className="text-5xl font-bold text-primary tracking-tight mt-1">
-                ≈ ฿{getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-                (คำนวณจริง: ฿{formatPrice(result.sellingPrice)})
-            </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
-                <TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม
-                </p>
-                <p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(result.platformFeeAmount)}</p>
-            </div>
-            <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2">
-                <Wallet />กำไรที่จะได้รับ
-                </p>
-                <p className="text-2xl font-semibold text-green-600 mt-1 text-center">฿{formatPrice(result.profit)}</p>
-            </div>
-            </div>
-            {result.platform === 'shopee' && (
-            <Card className="w-full">
-                <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-yellow-500" />ราคาแนะนำ (ผ่อนชำระ)
-                </CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                <div className="text-center p-4 bg-muted rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต</p>
-                    <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeCreditCardPrice).toLocaleString('en-US')}</p>
+const ResultDisplay = ({ item }: { item: StockItem | null }) => {
+    const [noProfit, setNoProfit] = useState(false);
+    const [editProfit, setEditProfit] = useState(false);
+    const [customProfit, setCustomProfit] = useState(20);
+
+    const calculationResult = useMemo(() => {
+        if (!item) return null;
+
+        let profitMargin = 20;
+        if (noProfit) {
+            profitMargin = 0;
+        } else if (editProfit) {
+            profitMargin = customProfit;
+        }
+
+        return calculatePrice({
+            platform: item.platform.toLowerCase(),
+            category: item.category,
+            cost: item.price,
+            profitMargin: profitMargin,
+        });
+    }, [item, noProfit, editProfit, customProfit]);
+
+    const handleNoProfitChange = (checked: boolean) => {
+        setNoProfit(checked);
+        if (checked) {
+            setEditProfit(false);
+        }
+    };
+
+    const handleEditProfitChange = (checked: boolean) => {
+        setEditProfit(checked);
+        if (checked) {
+            setNoProfit(false);
+        }
+    };
+
+    return (
+        <DialogContent className="max-w-2xl">
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                    <Calculator /> {`ผลคำนวณสำหรับ "${item?.name}"`}
+                </DialogTitle>
+                <DialogDescription>
+                    ผลการคำนวณราคาขายสำหรับสินค้าชิ้นนี้บนแพลตฟอร์มที่เลือก
+                </DialogDescription>
+            </DialogHeader>
+            {calculationResult ? (
+                <div className="py-4 max-h-[70vh] overflow-y-auto pr-4 space-y-4">
+                    <Card>
+                        <CardContent className="p-4 space-y-4">
+                           <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox id="noProfit" checked={noProfit} onCheckedChange={handleNoProfitChange} />
+                                    <Label htmlFor="noProfit" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        ไม่ต้องคำนวณกำไร
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                     <Checkbox id="editProfit" checked={editProfit} onCheckedChange={handleEditProfitChange} />
+                                    <Label htmlFor="editProfit" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        แก้ไขกำไร (%)
+                                    </Label>
+                                </div>
+                            </div>
+                            {editProfit && (
+                                <div className="relative">
+                                    <Input
+                                        type="number"
+                                        value={customProfit}
+                                        onChange={(e) => setCustomProfit(Number(e.target.value))}
+                                        className="pl-8"
+                                    />
+                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <div className="text-center p-6 bg-muted rounded-lg">
+                        <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย</p>
+                        <p className="text-5xl font-bold text-primary tracking-tight mt-1">
+                            ≈ ฿{getPsychologicalPrice(calculationResult.sellingPrice).toLocaleString('en-US')}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            (คำนวณจริง: ฿{formatPrice(calculationResult.sellingPrice)})
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-muted rounded-lg">
+                            <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2">
+                                <TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม
+                            </p>
+                            <p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(calculationResult.platformFeeAmount)}</p>
+                        </div>
+                        <div className="p-4 bg-muted rounded-lg">
+                            <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2">
+                                <Wallet />กำไรที่จะได้รับ
+                            </p>
+                            <p className={`text-2xl font-semibold mt-1 text-center ${calculationResult.profit > 0 ? 'text-green-600' : 'text-foreground'}`}>
+                                ฿{formatPrice(calculationResult.profit)}
+                            </p>
+                        </div>
+                    </div>
+                    {calculationResult.platform === 'shopee' && (
+                        <Card className="w-full">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Sparkles className="h-5 w-5 text-yellow-500" />ราคาแนะนำ (ผ่อนชำระ)
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                <div className="text-center p-4 bg-muted rounded-lg">
+                                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><CreditCard /> บัตรเครดิต</p>
+                                    <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(calculationResult.shopeeCreditCardPrice).toLocaleString('en-US')}</p>
+                                </div>
+                                <div className="text-center p-4 bg-muted rounded-lg">
+                                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p>
+                                    <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(calculationResult.shopeeSPayLaterPrice).toLocaleString('en-US')}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><Sparkles className="h-4 w-4" /> SPayLater</p>
-                    <p className="text-2xl font-bold text-primary tracking-tight">≈ ฿{getPsychologicalPrice(result.shopeeSPayLaterPrice).toLocaleString('en-US')}</p>
+            ) : (
+                <div className="py-4">
+                    <Alert variant="destructive">
+                        <Info className="h-4 w-4" />
+                        <AlertTitle>ไม่สามารถคำนวณได้</AlertTitle>
+                        <AlertDescription>
+                            โปรดตรวจสอบว่าสินค้ามีหมวดหมู่ที่ถูกต้องสำหรับแพลตฟอร์มนี้
+                        </AlertDescription>
+                    </Alert>
                 </div>
-                </CardContent>
-            </Card>
             )}
-        </div>
-      ) : (
-        <div className="py-4">
-            <Alert variant="destructive">
-                <Info className="h-4 w-4" />
-                <AlertTitle>ไม่สามารถคำนวณได้</AlertTitle>
-                <AlertDescription>
-                    โปรดตรวจสอบว่าสินค้ามีหมวดหมู่ที่ถูกต้องสำหรับแพลตฟอร์มนี้
-                </AlertDescription>
-            </Alert>
-        </div>
-      )}
-    </DialogContent>
-  );
+        </DialogContent>
+    );
+};
 
 export default function NotionTablePage() {
   const [data, setData] = useState<StockItem[]>([]);
@@ -186,17 +257,7 @@ export default function NotionTablePage() {
   });
 
   const selectedPlatformForForm = watch('platform');
-
-  const calculationResult = useMemo(() => {
-    if (!resultItem || !resultItem.platform || !resultItem.category) return null;
-    return calculatePrice({
-      platform: resultItem.platform.toLowerCase(),
-      category: resultItem.category,
-      cost: resultItem.price,
-      profitMargin: 20, // Default profit margin for quick calculation
-    });
-  }, [resultItem]);
-
+  
   useEffect(() => {
     fetchData();
   }, []);
@@ -582,10 +643,10 @@ export default function NotionTablePage() {
       
       {/* Result Dialog */}
       <Dialog open={!!resultItem} onOpenChange={(isOpen) => !isOpen && setResultItem(null)}>
-        {resultItem && (
-            <ResultDisplay result={calculationResult} title={`ผลคำนวณสำหรับ "${resultItem?.name}"`} />
-        )}
+        <ResultDisplay item={resultItem} />
       </Dialog>
     </>
   );
 }
+
+    

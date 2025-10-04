@@ -31,6 +31,7 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
     cost: number;
     otherCosts?: { value: number }[];
     profitMargin?: number;
+    profitAmount?: number; // Added to allow fixed profit amount
     discount?: number;
     affiliateCommission?: number;
   }
@@ -56,19 +57,14 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
   };
   
   const calculateSellingPriceInternal = (baseCost: number, profitAmount: number, discount: number, feeRate: number): number => {
-    // This is the core formula to determine the selling price
     const numerator = baseCost + profitAmount + discount;
     const denominator = 1 - feeRate;
-    if (denominator <= 0) return Infinity; // Avoid division by zero or negative
-    
-    // Simplified: Price = (Costs + Profit + Discount) / (1 - TotalFeeRate)
-    // Why add discount to numerator? Because fees are calculated on (Price - Discount)
-    // So we need to inflate the price to cover the fee loss from the discount.
+    if (denominator <= 0) return Infinity;
     return numerator / denominator;
   }
   
   export const calculatePrice = (values: CalculationInput): CalculationResult | null => {
-    const { cost, profitMargin = 0, otherCosts = [], platform, category, discount = 0, affiliateCommission = 0 } = values;
+    const { cost, profitMargin = 0, profitAmount: fixedProfitAmount, otherCosts = [], platform, category, discount = 0, affiliateCommission = 0 } = values;
   
     if (!platform || !category || !PLATFORM_FEES[platform] || !PLATFORM_FEES[platform][category]) {
       return null;
@@ -81,7 +77,9 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
   
     const totalOtherCosts = otherCosts.reduce((sum, current) => sum + (current.value || 0), 0);
     const totalCost = cost + totalOtherCosts;
-    const profitAmount = (cost * profitMargin) / 100;
+    
+    // Use fixed profit amount if provided, otherwise calculate from margin
+    const profitAmount = fixedProfitAmount !== undefined ? fixedProfitAmount : (cost * profitMargin) / 100;
   
     const platformFeeRate = (commissionPercent + orderFeePercent + paymentFeePercent) / 100;
     const affiliateRate = affiliateCommission / 100;
@@ -165,3 +163,4 @@ export const PLATFORM_FEES: { [key: string]: { [key: string]: { name: string, fe
     }
   }
 
+    
