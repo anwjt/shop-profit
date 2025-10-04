@@ -55,6 +55,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
     Select,
     SelectContent,
@@ -71,7 +72,7 @@ export type StockItem = {
   sku: string;
   price: number;
   status: 'ขายแล้ว' | 'รอขาย';
-  platform: string; // Now a comma-separated string
+  platform: string; 
   category: string;
 };
 
@@ -79,7 +80,7 @@ const platforms = ["Shopee", "Lazada", "TikTok Shop"] as const;
 
 const skuSchema = z.object({
   sku: z.string().min(1, "SKU ห้ามว่าง"),
-  platforms: z.array(z.string()).min(1, "ต้องเลือกอย่างน้อย 1 แพลตฟอร์ม"),
+  platform: z.string({required_error: "ต้องเลือกแพลตฟอร์ม"}).min(1, "ต้องเลือกแพลตฟอร์ม"),
 });
 
 const stockItemFormSchema = z.object({
@@ -102,8 +103,7 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
     const calculationResult = useMemo(() => {
         if (!item || !item.platform) return null;
 
-        // Use the first platform for calculation if multiple exist
-        const platformToCalculate = item.platform.split(',')[0].trim().toLowerCase();
+        const platformToCalculate = item.platform.toLowerCase();
         
         let profitValue: { profitMargin?: number; profitAmount?: number } = { profitMargin: 20 };
 
@@ -136,7 +136,7 @@ const ResultDisplay = ({ item }: { item: StockItem | null }) => {
     };
 
     if (!item) return null;
-    const displayPlatform = item.platform.split(',')[0].trim();
+    const displayPlatform = item.platform;
 
     return (
         <DialogContent className="max-w-2xl">
@@ -258,7 +258,7 @@ export default function NotionTablePage() {
       name: '',
       price: undefined,
       category: '',
-      skus: [{ sku: '', platforms: [] }],
+      skus: [{ sku: '', platform: '' }],
     }
   });
 
@@ -314,14 +314,14 @@ export default function NotionTablePage() {
             name: item.name,
             price: item.price,
             category: item.category,
-            skus: [{ sku: item.sku, platforms: item.platform.split(',').map(p => p.trim()) }],
+            skus: [{ sku: item.sku, platform: item.platform }],
         });
     } else {
         reset({
           name: '',
           price: undefined,
           category: '',
-          skus: [{ sku: '', platforms: [] }],
+          skus: [{ sku: '', platform: '' }],
         });
     }
     setIsFormOpen(true);
@@ -335,24 +335,20 @@ export default function NotionTablePage() {
     try {
         const { name, price, category } = formData;
         
-        // This will hold all the promises for creating items
-        const creationPromises = formData.skus.flatMap(skuItem => {
-            const { sku, platforms } = skuItem;
-            // Create a new item for each platform selected for a given SKU
-            return platforms.map(platform => {
-                const payload = {
-                    name,
-                    price,
-                    category,
-                    sku,
-                    platform: [platform], // Send as an array for multi-select
-                    status: 'รอขาย'
-                };
-                return fetch('/api/notion', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
+        const creationPromises = formData.skus.map(skuItem => {
+            const { sku, platform } = skuItem;
+            const payload = {
+                name,
+                price,
+                category,
+                sku,
+                platform,
+                status: 'รอขาย'
+            };
+            return fetch('/api/notion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
             });
         });
 
@@ -445,7 +441,7 @@ export default function NotionTablePage() {
             <ul className="list-disc list-inside mt-2 text-xs">
               <li>ตรวจสอบว่า `NOTION_API_KEY` และ `NOTION_DATABASE_ID` ในไฟล์ `.env.local` ถูกต้อง</li>
               <li>ตรวจสอบว่า Integration ของคุณได้ถูกเชิญให้เข้าถึง Database ใน Notion และได้รับสิทธิ์ในการ "Read", "Update", และ "Insert"</li>
-               <li>ตรวจสอบว่าคอลัมน์ `Platform` ใน Notion ถูกตั้งค่าเป็น **Multi-select**</li>
+               <li>ตรวจสอบว่าคอลัมน์ `Platform` ใน Notion ถูกตั้งค่าเป็น **Select** (ไม่ใช่ Multi-select)</li>
               <li>ตรวจสอบว่าชื่อและประเภทของคอลัมน์ (Property) ใน Notion ตรงกับที่กำหนดใน `src/app/api/notion/route.ts`</li>
               <li><span className="font-mono bg-destructive-foreground/20 p-1 rounded">Error: {error}</span></li>
             </ul>
@@ -721,39 +717,31 @@ export default function NotionTablePage() {
                           <div className="pl-4">
                             <Label>สำหรับแพลตฟอร์ม</Label>
                             <Controller
-                              name={`skus.${index}.platforms`}
+                              name={`skus.${index}.platform`}
                               control={control}
-                              render={({ field: controllerField }) => (
-                                <div className="flex flex-wrap gap-4 mt-2">
+                              render={({ field }) => (
+                                <RadioGroup
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                  className="flex flex-wrap gap-4 mt-2"
+                                >
                                   {platforms.map((platform) => (
-                                    <div key={platform} className="flex items-center gap-2">
-                                      <Checkbox
-                                        id={`skus.${index}.platforms.${platform}`}
-                                        checked={controllerField.value?.includes(platform)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? controllerField.onChange([...(controllerField.value || []), platform])
-                                            : controllerField.onChange(
-                                                (controllerField.value || []).filter(
-                                                  (value) => value !== platform
-                                                )
-                                              );
-                                        }}
-                                      />
-                                      <label htmlFor={`skus.${index}.platforms.${platform}`} className="text-sm font-medium">
-                                        {platform}
-                                      </label>
-                                    </div>
+                                    <FormItem key={platform} className="flex items-center space-x-2 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value={platform} id={`${field.name}-${platform}`}/>
+                                      </FormControl>
+                                      <Label htmlFor={`${field.name}-${platform}`}>{platform}</Label>
+                                    </FormItem>
                                   ))}
-                                </div>
+                                </RadioGroup>
                               )}
                             />
-                             {errors.skus?.[index]?.platforms && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.platforms?.message}</p>}
+                             {errors.skus?.[index]?.platform && <p className="text-xs text-destructive mt-1">{errors.skus?.[index]?.platform?.message}</p>}
                           </div>
                           {index < fields.length - 1 && <hr className='my-4'/>}
                         </div>
                       ))}
-                      <Button type="button" variant="outline" size="sm" onClick={() => append({ sku: '', platforms: [] })}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => append({ sku: '', platform: '' })}>
                         <PlusCircle className="mr-2 h-4 w-4" /> เพิ่ม SKU
                       </Button>
                     </div>
@@ -775,5 +763,3 @@ export default function NotionTablePage() {
     </>
   );
 }
-
-    
