@@ -47,7 +47,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { getPlatformCategories } from '@/lib/price-calculation';
-import { Form, FormControl, FormItem, FormField } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 
 export type StockItem = {
   id: string;
@@ -64,6 +64,8 @@ type GroupedStockItem = {
     skuCount: number;
     platforms: string[];
     items: StockItem[];
+    soldCount: number;
+    remainingCount: number;
 }
 
 const skuSchema = z.object({
@@ -81,7 +83,8 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const platformCategories = getPlatformCategories();
-const platforms = Object.keys(platformCategories);
+const platforms = Object.keys(platformCategories).map(p => p.charAt(0).toUpperCase() + p.slice(1).replace('-', ' '));
+
 
 export default function NotionTablePage() {
   const [data, setData] = useState<StockItem[]>([]);
@@ -127,12 +130,19 @@ export default function NotionTablePage() {
                 name: item.name,
                 skuCount: 0,
                 platforms: [],
-                items: []
+                items: [],
+                soldCount: 0,
+                remainingCount: 0,
             };
         }
         acc[item.name].skuCount++;
         if (item.platform && !acc[item.name].platforms.includes(item.platform)) {
             acc[item.name].platforms.push(item.platform);
+        }
+        if (item.status === 'ขายแล้ว') {
+            acc[item.name].soldCount++;
+        } else {
+            acc[item.name].remainingCount++;
         }
         acc[item.name].items.push(item);
         return acc;
@@ -230,6 +240,8 @@ export default function NotionTablePage() {
                     <Skeleton className="h-5 w-3/4" />
                 </div>
                 <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-16" />
             </div>
           ))}
@@ -276,6 +288,7 @@ export default function NotionTablePage() {
               <TableRow>
                 <TableHead>ชื่อสินค้า</TableHead>
                 <TableHead className="text-center">จำนวน SKU</TableHead>
+                <TableHead>จำนวนการขาย</TableHead>
                 <TableHead>แพลตฟอร์ม</TableHead>
                 <TableHead className="text-right w-[50px]"></TableHead>
               </TableRow>
@@ -291,6 +304,12 @@ export default function NotionTablePage() {
                       </TableCell>
                       <TableCell className="text-center">{item.skuCount}</TableCell>
                       <TableCell>
+                          <div className='text-xs'>
+                            <p className='text-green-600'>ขายแล้ว: {item.soldCount}</p>
+                            <p className='text-muted-foreground'>คงเหลือ: {item.remainingCount}</p>
+                          </div>
+                      </TableCell>
+                      <TableCell>
                           <div className="flex flex-wrap gap-1">
                               {item.platforms.map(p => <Badge key={p} variant="outline">{p}</Badge>)}
                           </div>
@@ -304,7 +323,7 @@ export default function NotionTablePage() {
                   ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                         ไม่พบข้อมูลที่ตรงกับตัวกรอง
                     </TableCell>
                 </TableRow>
@@ -503,9 +522,9 @@ export default function NotionTablePage() {
                                     {platforms.map((platform) => (
                                       <FormItem key={platform} className="flex items-center space-x-2 space-y-0">
                                         <FormControl>
-                                          <RadioGroupItem value={platform.charAt(0).toUpperCase() + platform.slice(1).replace('-',' ')} id={`${field.name}-${platform}`} />
+                                          <RadioGroupItem value={platform} id={`${field.name}-${platform}`} />
                                         </FormControl>
-                                        <Label htmlFor={`${field.name}-${platform}`}>{platform.charAt(0).toUpperCase() + platform.slice(1).replace('-',' ')}</Label>
+                                        <Label htmlFor={`${field.name}-${platform}`}>{platform}</Label>
                                       </FormItem>
                                     ))}
                                   </RadioGroup>
