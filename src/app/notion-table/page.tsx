@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -69,7 +69,7 @@ export type StockItem = {
   name:string;
   stock: number;
   price: number;
-  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  status: 'ขายแล้ว' | 'รอขาย';
   platform: string;
   category: string;
 };
@@ -78,7 +78,7 @@ const stockItemSchema = z.object({
     name: z.string().min(1, 'ชื่อสินค้าห้ามว่าง'),
     stock: z.coerce.number().min(0, 'สต็อกต้องเป็นตัวเลขไม่ติดลบ'),
     price: z.coerce.number().min(0, 'ราคาต้องเป็นตัวเลขไม่ติดลบ'),
-    status: z.enum(['In Stock', 'Low Stock', 'Out of Stock']),
+    status: z.enum(['ขายแล้ว', 'รอขาย']),
     platform: z.string().min(1, "กรุณาเลือกแพลตฟอร์ม"),
     category: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
 });
@@ -87,12 +87,10 @@ type StockItemFormData = z.infer<typeof stockItemSchema>;
 
 const getStatusVariant = (status: StockItem['status']) => {
   switch (status) {
-    case 'In Stock':
+    case 'ขายแล้ว':
       return 'default';
-    case 'Low Stock':
+    case 'รอขาย':
       return 'secondary';
-    case 'Out of Stock':
-      return 'destructive';
     default:
       return 'outline';
   }
@@ -181,7 +179,7 @@ export default function NotionTablePage() {
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm<StockItemFormData>({
     resolver: zodResolver(stockItemSchema),
     defaultValues: {
-        status: 'In Stock',
+        status: 'รอขาย',
         platform: 'Shopee',
         category: 'other',
     }
@@ -239,7 +237,7 @@ export default function NotionTablePage() {
             category: item.category,
         });
     } else {
-        reset({ name: '', stock: 0, price: 0, status: 'In Stock', platform: 'Shopee', category: '' });
+        reset({ name: '', stock: 0, price: 0, status: 'รอขาย', platform: 'Shopee', category: '' });
     }
     setIsFormOpen(true);
   };
@@ -280,6 +278,25 @@ export default function NotionTablePage() {
       toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
     }
   };
+
+  const updateItemStatus = async (item: StockItem, newStatus: StockItem['status']) => {
+    try {
+        const response = await fetch('/api/notion', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: item.id, status: newStatus }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Status update failed');
+        }
+        const updatedItem = await response.json();
+        setData(data.map(d => d.id === item.id ? updatedItem : d));
+        toast({ title: "อัปเดตสถานะสำเร็จ", description: `สถานะของ "${item.name}" ถูกเปลี่ยนเป็น "${newStatus}"` });
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "เกิดข้อผิดพลาด", description: e.message });
+    }
+  }
 
   const handleDelete = async (itemId: string) => {
     try {
@@ -361,6 +378,7 @@ export default function NotionTablePage() {
               <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="text-right">สต็อก</TableHead>
               <TableHead className="text-right">ต้นทุน (บาท)</TableHead>
+              <TableHead className="text-center">การขาย</TableHead>
               <TableHead className="text-right w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -379,6 +397,17 @@ export default function NotionTablePage() {
                 </TableCell>
                 <TableCell className="text-right">{item.stock}</TableCell>
                 <TableCell className="text-right font-bold">{item.price.toFixed(2)}</TableCell>
+                <TableCell className="text-center">
+                    {item.status === 'รอขาย' ? (
+                        <Button variant="secondary" size="sm" onClick={() => updateItemStatus(item, 'ขายแล้ว')}>
+                           <ShoppingCart className="mr-2 h-4 w-4" /> ขายแล้ว
+                        </Button>
+                    ) : (
+                       <Button variant="ghost" size="sm" disabled>
+                           -
+                        </Button>
+                    )}
+                </TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -529,14 +558,13 @@ export default function NotionTablePage() {
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="status" className="text-right">สถานะ</Label>
                         <div className="col-span-3">
-                            <Select onValueChange={(value) => setValue('status', value as StockItem['status'])} defaultValue={editingItem?.status || 'In Stock'}>
+                            <Select onValueChange={(value) => setValue('status', value as StockItem['status'])} defaultValue={editingItem?.status || 'รอขาย'}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="เลือกสถานะ" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="In Stock">In Stock</SelectItem>
-                                    <SelectItem value="Low Stock">Low Stock</SelectItem>
-                                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                    <SelectItem value="รอขาย">รอขาย</SelectItem>
+                                    <SelectItem value="ขายแล้ว">ขายแล้ว</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

@@ -32,13 +32,13 @@ function pageToStockItem(page: any): StockItem | null {
     const name = properties[PROPERTY_NAMES.name]?.title[0]?.plain_text ?? '';
     const stock = properties[PROPERTY_NAMES.stock]?.number ?? 0;
     const price = properties[PROPERTY_NAMES.price]?.number ?? 0;
-    const status = properties[PROPERTY_NAMES.status]?.select?.name ?? 'Out of Stock';
-    const platform = properties[PROPERTY_NAMES.platform]?.select?.name ?? 'Shopee';
-    const category = properties[PROPERTY_NAMES.category]?.select?.name ?? 'other';
+    const status = properties[PROPERTY_NAMES.status]?.select?.name ?? 'รอขาย';
+    const platform = properties[PROPERTY_NAMES.platform]?.select?.name ?? '';
+    const category = properties[PROPERTY_NAMES.category]?.select?.name ?? '';
 
-    const validStatus = ['In Stock', 'Low Stock', 'Out of Stock'].includes(status) 
+    const validStatus = ['ขายแล้ว', 'รอขาย'].includes(status) 
         ? status as StockItem['status'] 
-        : 'Out of Stock';
+        : 'รอขาย';
 
     return {
       id: page.id,
