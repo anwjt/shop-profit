@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Table, Info, LoaderCircle, ServerCrash, PlusCircle, MoreHorizontal, Trash2, Edit, Calculator, TrendingUp, Wallet, Package, Sparkles, CreditCard, ShoppingCart, CheckCircle, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,17 +85,6 @@ const stockItemSchema = z.object({
 });
 
 type StockItemFormData = z.infer<typeof stockItemSchema>;
-
-const getStatusVariant = (status: StockItem['status']) => {
-  switch (status) {
-    case 'ขายแล้ว':
-      return 'default';
-    case 'รอขาย':
-      return 'secondary';
-    default:
-      return 'outline';
-  }
-};
 
 const platformCategories = getPlatformCategories();
 
@@ -246,6 +235,9 @@ export default function NotionTablePage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [resultItem, setResultItem] = useState<StockItem | null>(null);
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const { toast } = useToast();
 
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm<StockItemFormData>({
@@ -268,6 +260,23 @@ export default function NotionTablePage() {
         setValue('category', '');
     }
   }, [selectedPlatformForForm, setValue]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [platformFilter, rowsPerPage]);
+
+
+  const filteredData = useMemo(() => {
+      return data.filter(item => platformFilter === 'all' || item.platform === platformFilter);
+  }, [data, platformFilter]);
+
+  const paginatedData = useMemo(() => {
+      const startIndex = (currentPage - 1) * rowsPerPage;
+      const endIndex = startIndex + rowsPerPage;
+      return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, rowsPerPage]);
+
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
   const fetchData = async () => {
     setLoading(true);
@@ -431,82 +440,146 @@ export default function NotionTablePage() {
     }
 
     return (
-      <div className="overflow-x-auto rounded-lg border">
-        <UiTable>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ชื่อสินค้า</TableHead>
-              <TableHead>แพลตฟอร์ม</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead className="text-right">ต้นทุน (บาท)</TableHead>
-              <TableHead className="text-center">สถานะ</TableHead>
-              <TableHead className="text-right w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => handleOpenResult(item)} disabled={!item.platform || !item.category}>
-                        <Calculator className="mr-2 h-3 w-3" />
-                        {item.platform}
-                    </Button>
-                </TableCell>
-                <TableCell>{item.sku}</TableCell>
-                <TableCell className="text-right font-bold">{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                <TableCell className="text-center">
-                    {item.status === 'รอขาย' ? (
-                        <Button variant="secondary" size="sm" onClick={() => updateItemStatus(item, 'ขายแล้ว')}>
-                           <ShoppingCart className="mr-2 h-4 w-4" /> ขายแล้ว
-                        </Button>
-                    ) : (
-                       <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-                         <CheckCircle className="mr-2 h-4 w-4" />
-                         ขายแล้ว
-                       </Badge>
-                    )}
-                </TableCell>
-                <TableCell className="text-right">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleOpenForm(item)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                <span>แก้ไข</span>
-                            </DropdownMenuItem>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                        <span className='text-destructive'>ลบ</span>
-                                    </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>คุณแน่ใจหรือไม่?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        การกระทำนี้ไม่สามารถย้อนกลับได้ สินค้าจะถูกลบ (เก็บในถังขยะ) ออกจากฐานข้อมูล Notion ของคุณ
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(item.id)} className='bg-destructive hover:bg-destructive/90'>ยืนยันการลบ</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </TableCell>
+      <div className="space-y-4">
+        <div className="overflow-x-auto rounded-lg border">
+          <UiTable>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ชื่อสินค้า</TableHead>
+                <TableHead>แพลตฟอร์ม</TableHead>
+                <TableHead>SKU</TableHead>
+                <TableHead className="text-right">ต้นทุน (บาท)</TableHead>
+                <TableHead className="text-center">สถานะ</TableHead>
+                <TableHead className="text-right w-[50px]"></TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </UiTable>
+            </TableHeader>
+            <TableBody>
+              {paginatedData.length > 0 ? (
+                  paginatedData.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => handleOpenResult(item)} disabled={!item.platform || !item.category}>
+                              <Calculator className="mr-2 h-3 w-3" />
+                              {item.platform}
+                          </Button>
+                      </TableCell>
+                      <TableCell>{item.sku}</TableCell>
+                      <TableCell className="text-right font-bold">{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-center">
+                          {item.status === 'รอขาย' ? (
+                              <Button variant="secondary" size="sm" onClick={() => updateItemStatus(item, 'ขายแล้ว')}>
+                                 <ShoppingCart className="mr-2 h-4 w-4" /> ขายแล้ว
+                              </Button>
+                          ) : (
+                             <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                               <CheckCircle className="mr-2 h-4 w-4" />
+                               ขายแล้ว
+                             </Badge>
+                          )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                      <span className="sr-only">Open menu</span>
+                                      <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleOpenForm(item)}>
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      <span>แก้ไข</span>
+                                  </DropdownMenuItem>
+                                  <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                              <span className='text-destructive'>ลบ</span>
+                                          </DropdownMenuItem>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                          <AlertDialogTitle>คุณแน่ใจหรือไม่?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                              การกระทำนี้ไม่สามารถย้อนกลับได้ สินค้าจะถูกลบ (เก็บในถังขยะ) ออกจากฐานข้อมูล Notion ของคุณ
+                                          </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                          <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(item.id)} className='bg-destructive hover:bg-destructive/90'>ยืนยันการลบ</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                  </AlertDialog>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                        ไม่พบข้อมูลที่ตรงกับตัวกรอง
+                    </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </UiTable>
+        </div>
+        
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+                มี {filteredData.length} รายการ
+            </div>
+            <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">แสดงแถวละ</p>
+                    <Select
+                        value={`${rowsPerPage}`}
+                        onValueChange={(value) => {
+                            setRowsPerPage(Number(value));
+                            setCurrentPage(1);
+                        }}
+                        >
+                        <SelectTrigger className="h-8 w-[70px]">
+                            <SelectValue placeholder={rowsPerPage} />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                            {[5, 10, 20, 50].map((pageSize) => (
+                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                {pageSize}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="text-sm font-medium">
+                    หน้า {currentPage} จาก {totalPages}
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                        ก่อนหน้า
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                    >
+                        ถัดไป
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+
       </div>
     );
   }
@@ -528,7 +601,21 @@ export default function NotionTablePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                 <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Select onValueChange={setPlatformFilter} defaultValue="all">
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="กรองตามแพลตฟอร์ม" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">ทุกแพลตฟอร์ม</SelectItem>
+                            <SelectItem value="Shopee">Shopee</SelectItem>
+                            <SelectItem value="Lazada">Lazada</SelectItem>
+                            <SelectItem value="TikTok Shop">TikTok Shop</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
                 <Button onClick={() => handleOpenForm()}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     เพิ่มสินค้าใหม่
@@ -647,4 +734,6 @@ export default function NotionTablePage() {
   );
 }
     
+    
+
     
