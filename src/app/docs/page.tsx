@@ -169,15 +169,19 @@ export default function DocsPage() {
                           </TableHeader>
                           <TableBody>
                             <TableRow>
-                              <TableCell>มือถือ / แอร์ / คอมฯ (Tier 1)</TableCell>
+                              <TableCell>มือถือ / กล้อง / เกม / คอมฯ (Tier 1)</TableCell>
                               <TableCell className="text-right font-bold">8.56%</TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell>เครื่องใช้ไฟฟ้าเล็ก (Tier 2)</TableCell>
-                              <TableCell className="text-right font-bold">9.63%</TableCell>
+                              <TableCell>เครื่องใช้ไฟฟ้าขนาดใหญ่ (แอร์/ตู้เย็น/ทีวี)</TableCell>
+                              <TableCell className="text-right font-bold">9.10%</TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell>Gadget / เครื่องเสียง / จอ (Tier 3)</TableCell>
+                              <TableCell>เครื่องใช้ไฟฟ้าขนาดเล็ก (หม้อหุงข้าว/พัดลม)</TableCell>
+                              <TableCell className="text-right font-bold">10.17%</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Gadget / อุปกรณ์เสริม / จอมอนิเตอร์</TableCell>
                               <TableCell className="text-right font-bold">11.77%</TableCell>
                             </TableRow>
                             <TableRow>
@@ -186,7 +190,7 @@ export default function DocsPage() {
                             </TableRow>
                             <TableRow>
                               <TableCell>สินค้าแฟชั่น / เครื่องประดับ (Tier 5)</TableCell>
-                              <TableCell className="text-right font-bold">16.05%</TableCell>
+                              <TableCell className="text-right font-bold">17.12%</TableCell>
                             </TableRow>
                           </TableBody>
                         </Table>
