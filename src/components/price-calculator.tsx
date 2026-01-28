@@ -195,106 +195,102 @@ export default function PriceCalculator({ isStandalone = true }: PriceCalculator
     <>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Tabs defaultValue="standard" onValueChange={handleModeChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="standard">คำนวณแบบบวกกำไร/ค่าใช้จ่าย</TabsTrigger>
-              <TabsTrigger value="breakeven">คำนวณราคาขายเท่าทุน (Break-even)</TabsTrigger>
-            </TabsList>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="platform"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>1. เลือกแพลตฟอร์ม</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <Store className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                          <SelectValue placeholder="เลือกแพลตฟอร์ม" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="shopee">Shopee</SelectItem>
-                        <SelectItem value="lazada">Lazada</SelectItem>
-                        <SelectItem value="tiktok shop">TikTok Shop</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>2. หมวดหมู่สินค้า</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatform}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <LayoutGrid className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                          <SelectValue placeholder={selectedPlatform ? "เลือกหมวดหมู่" : "กรุณาเลือกแพลตฟอร์มก่อน"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {platformCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="cost"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>3. ต้นทุนสินค้า (บาท)</FormLabel>
-                    <div className="relative">
-                      <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
-                      </FormControl>
-                    </div>
-                    <FormDescription>ต้นทุนต่อชิ้น (รวมค่าส่งมาที่เราแล้ว)</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
-            {!isBreakEvenMode && (
-              <div className="space-y-6 mt-6 pt-6 border-t animate-in fade-in slide-in-from-top-4 duration-300">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <FormField control={form.control} name="profitMargin" render={({ field }) => (<FormItem><FormLabel>4. กำไรที่ต้องการ (บาท)</FormLabel><div className="relative"><TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกกำไรที่ต้องการ" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>กำไรสุทธิที่ต้องการต่อชิ้น</FormDescription><FormMessage /></FormItem>)} />
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <FormLabel className="text-base font-semibold">5. ค่าใช้จ่ายอื่นๆ (ต่อชิ้น)</FormLabel>
-                    </div>
-                    <div className="space-y-2">
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="flex gap-2 items-start animate-in fade-in slide-in-from-left-2">
-                          <FormField control={form.control} name={`otherCosts.${index}.name`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input placeholder="ชื่อค่าใช้จ่าย (เช่น ค่าแพ็ค)" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={form.control} name={`otherCosts.${index}.value`} render={({ field }) => (<FormItem className="w-24"><FormControl><Input type="number" placeholder="บาท" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>)} />
-                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-destructive hover:text-destructive/90"><XCircle className="h-4 w-4" /></Button>
-                        </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="platform"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>1. เลือกแพลตฟอร์ม</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <Store className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="เลือกแพลตฟอร์ม" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="shopee">Shopee</SelectItem>
+                      <SelectItem value="lazada">Lazada</SelectItem>
+                      <SelectItem value="tiktok shop">TikTok Shop</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>2. หมวดหมู่สินค้า</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatform}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <LayoutGrid className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder={selectedPlatform ? "เลือกหมวดหมู่" : "กรุณาเลือกแพลตฟอร์มก่อน"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {platformCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
                       ))}
-                      <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', value: 0 })}><PlusCircle className="mr-2 h-4 w-4" />เพิ่มรายการค่าใช้จ่าย</Button>
-                    </div>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>3. ต้นทุนสินค้า (บาท)</FormLabel>
+                  <div className="relative">
+                    <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                    </FormControl>
                   </div>
-                  <FormField control={form.control} name="discount" render={({ field }) => (<FormItem><FormLabel>6. ส่วนลดร้านค้า (บาท)</FormLabel><div className="relative"><BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกส่วนลด" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ส่วนลดที่ร้านค้าเป็นผู้รับผิดชอบทั้งหมด (เช่น คูปองส่วนลดที่ร้านสร้างเอง)</FormDescription><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="affiliateCommission" render={({ field }) => (<FormItem><FormLabel>7. ค่าคอม Affiliate (%)</FormLabel><div className="relative"><Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย</FormDescription><FormMessage /></FormItem>)} />
-                </div>
-              </div>
-            )}
+                  <FormDescription>ต้นทุนต่อชิ้น (รวมค่าส่งมาที่เราแล้ว)</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-          </Tabs>
+          {!isBreakEvenMode && (
+            <div className="space-y-6 mt-6 pt-6 border-t animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField control={form.control} name="profitMargin" render={({ field }) => (<FormItem><FormLabel>4. กำไรที่ต้องการ (บาท)</FormLabel><div className="relative"><TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกกำไรที่ต้องการ" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>กำไรสุทธิที่ต้องการต่อชิ้น</FormDescription><FormMessage /></FormItem>)} />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-base font-semibold">5. ค่าใช้จ่ายอื่นๆ (ต่อชิ้น)</FormLabel>
+                  </div>
+                  <div className="space-y-2">
+                    {fields.map((field, index) => (
+                      <div key={field.id} className="flex gap-2 items-start animate-in fade-in slide-in-from-left-2">
+                        <FormField control={form.control} name={`otherCosts.${index}.name`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input placeholder="ชื่อค่าใช้จ่าย (เช่น ค่าแพ็ค)" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name={`otherCosts.${index}.value`} render={({ field }) => (<FormItem className="w-24"><FormControl><Input type="number" placeholder="บาท" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>)} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-destructive hover:text-destructive/90"><XCircle className="h-4 w-4" /></Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', value: 0 })}><PlusCircle className="mr-2 h-4 w-4" />เพิ่มรายการค่าใช้จ่าย</Button>
+                  </div>
+                </div>
+                <FormField control={form.control} name="discount" render={({ field }) => (<FormItem><FormLabel>6. ส่วนลดร้านค้า (บาท)</FormLabel><div className="relative"><BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกส่วนลด" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ส่วนลดที่ร้านค้าเป็นผู้รับผิดชอบทั้งหมด (เช่น คูปองส่วนลดที่ร้านสร้างเอง)</FormDescription><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="affiliateCommission" render={({ field }) => (<FormItem><FormLabel>7. ค่าคอม Affiliate (%)</FormLabel><div className="relative"><Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย</FormDescription><FormMessage /></FormItem>)} />
+              </div>
+            </div>
+          )}
+
+
 
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <Button type="button" variant="outline" className="w-full" onClick={handleClear} disabled={!form.formState.isDirty && !result}>
