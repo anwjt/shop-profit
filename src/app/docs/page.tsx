@@ -358,24 +358,24 @@ export default function DocsPage() {
                           <li>ค่าแพ็คของ/ติดตั้ง: <span className="font-bold">500</span> บาท</li>
                           <li>ต้องการกำไร: <span className="font-bold">2,000</span> บาท</li>
                           <li>ส่วนลดร้านค้า: <span className="font-bold">100</span> บาท</li>
-                          <li>หมวดหมู่สินค้า: เครื่องใช้ไฟฟ้าใหญ่ (ค่าธรรมเนียมรวม = 5.35% + 3.21% = <span className="font-bold">8.56%</span>)</li>
+                          <li>หมวดหมู่สินค้า: เครื่องใช้ไฟฟ้าใหญ่ (ค่าธรรมเนียมรวมสุทธิ = <span className="font-bold">9.10%</span>)</li>
                           <li>ค่าธรรมเนียมคงที่: <span className="font-bold">1.07</span> บาท</li>
                         </ul>
                         <p className="font-semibold mb-2">ขั้นตอนการคำนวณ:</p>
                         <ol className="list-decimal list-inside space-y-2">
                           <li><span className="font-semibold">ต้นทุนรวม:</span> 30,000 + 500 = <span className="font-bold">30,500</span> บาท</li>
                           <li><span className="font-semibold">ยอดที่ต้องครอบคลุม:</span> 30,500 (ทุน) + 2,000 (กำไร) + 100 (ส่วนลด) + 1.07 (คงที่) = <span className="font-bold">32,601.07</span> บาท</li>
-                          <li><span className="font-semibold">หารด้วย (1 - ค่าธรรมเนียม):</span> 32,601.07 / (1 - 0.0856)</li>
-                          <li><span className="font-semibold">ราคาขายที่แนะนำ:</span> 32,601.07 / 0.9144 ≈ <span className="font-bold">35,653.00</span> บาท</li>
+                          <li><span className="font-semibold">หารด้วย (1 - ค่าธรรมเนียม):</span> 32,601.07 / (1 - 0.0910)</li>
+                          <li><span className="font-semibold">ราคาขายที่แนะนำ:</span> 32,601.07 / 0.9090 ≈ <span className="font-bold">35,864.76</span> บาท</li>
                           <li><span className="font-semibold">พิสูจน์กำไร:</span>
                             <ul className="list-disc list-inside mt-2 p-3 bg-green-100/50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                              <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600 dark:text-blue-400">35,653.00</span> บาท</li>
-                              <li>หักส่วนลดร้านค้า: -100.00 บาท (เหลือยอด 35,553.00)</li>
-                              <li>หักค่าธรรมเนียม Shopee (8.56% ของ 35,553 + 1.07): 3,043.34 + 1.07 = <span className="text-red-600 dark:text-red-400">-3,044.41</span> บาท</li>
+                              <li>รายรับจากลูกค้า (ตั้งขาย): <span className="font-bold text-blue-600 dark:text-blue-400">35,864.76</span> บาท</li>
+                              <li>หักส่วนลดร้านค้า: -100.00 บาท (เหลือยอด 35,764.76)</li>
+                              <li>หักค่าธรรมเนียม Shopee (9.10% ของ 35,764.76 + 1.07): 3,254.59 + 1.07 = <span className="text-red-600 dark:text-red-400">-3,255.66</span> บาท</li>
                               <li>หักต้นทุนรวม (สินค้า+แพ็ค): <span className="text-red-600 dark:text-red-400">-30,500.00</span> บาท</li>
-                              <li><span className="font-bold">กำไรสุทธิ: 35,653 - 100 - 3,044.41 - 30,500 = <span className="text-green-600 dark:text-green-400 font-bold text-base">2,008.59</span> บาท*</span></li>
+                              <li><span className="font-bold">กำไรสุทธิ: 35,864.76 - 100 - 3,255.66 - 30,500 = <span className="text-green-600 dark:text-green-400 font-bold text-base">2,009.10</span> บาท*</span></li>
                             </ul>
-                            <p className="text-xs text-muted-foreground mt-1">*กำไรที่ได้อาจสูงกว่า 2,000 เล็กน้อยเนื่องจากการปัดเศษทศนิยมและการคำนวณภาษี</p>
+                            <p className="text-xs text-muted-foreground mt-1">*กำไรที่ได้อาจสูงกว่า 2,000 เล็กน้อยเนื่องจากการคำนวณส่วนลดก่อนหักค่าธรรมเนียม</p>
                           </li>
                         </ol>
                       </TabsContent>
@@ -385,21 +385,21 @@ export default function DocsPage() {
                           <li>ราคาต้นทุนสินค้า: <span className="font-bold">30,000</span> บาท</li>
                           <li>กำไรที่ต้องการ: <span className="font-bold">0</span> บาท</li>
                           <li>ส่วนลดร้านค้า: <span className="font-bold">0</span> บาท</li>
-                          <li>หมวดหมู่สินค้า: เครื่องใช้ไฟฟ้าใหญ่ (ค่าธรรมเนียมรวม ≈ <span className="font-bold">8.56%</span>)</li>
+                          <li>หมวดหมู่สินค้า: เครื่องใช้ไฟฟ้าใหญ่ (ค่าธรรมเนียมรวมสุทธิ = <span className="font-bold">9.10%</span>)</li>
                           <li>ค่าธรรมเนียมคงที่: <span className="font-bold">1.07</span> บาท</li>
                         </ul>
                         <p className="font-semibold mb-2">ขั้นตอนการคำนวณ:</p>
                         <ol className="list-decimal list-inside space-y-2">
                           <li><span className="font-semibold">ต้นทุนรวม:</span> <span className="font-bold">30,000</span> บาท</li>
                           <li><span className="font-semibold">ยอดที่ต้องครอบคลุม:</span> 30,000 (ทุน) + 1.07 (คงที่) = <span className="font-bold">30,001.07</span> บาท</li>
-                          <li><span className="font-semibold">หารด้วย (1 - ค่าธรรมเนียม):</span> 30,001.07 / (1 - 0.0856)</li>
-                          <li><span className="font-semibold">ราคาขายที่แนะนำ:</span> 30,001.07 / 0.9144 ≈ <span className="font-bold">32,810.00</span> บาท</li>
+                          <li><span className="font-semibold">หารด้วย (1 - ค่าธรรมเนียม):</span> 30,001.07 / (1 - 0.0910)</li>
+                          <li><span className="font-semibold">ราคาขายที่แนะนำ:</span> 30,001.07 / 0.9090 ≈ <span className="font-bold">33,004.48</span> บาท</li>
                           <li><span className="font-semibold">พิสูจน์กำไร:</span>
                             <ul className="list-disc list-inside mt-2 p-3 bg-muted rounded-lg">
-                              <li>รายรับจากลูกค้า: <span className="font-bold">32,810.00</span> บาท</li>
-                              <li>หักค่าธรรมเนียม Shopee (8.56% + 1.07): 2,808.54 + 1.07 = <span className="text-red-600">-2,809.61</span> บาท</li>
+                              <li>รายรับจากลูกค้า: <span className="font-bold">33,004.48</span> บาท</li>
+                              <li>หักค่าธรรมเนียม Shopee (9.10% + 1.07): 3,003.41 + 1.07 = <span className="text-red-600">-3,004.48</span> บาท</li>
                               <li>หักต้นทุนสินค้า: <span className="text-red-600">-30,000.00</span> บาท</li>
-                              <li><span className="font-bold">คงเหลือ: 32,810 - 2,809.61 - 30,000 ≈ <span className="text-orange-600 font-bold">0.39</span> บาท</span> (ใกล้เคียง 0)</li>
+                              <li><span className="font-bold">คงเหลือ: 33,004.48 - 3,004.48 - 30,000 = <span className="text-orange-600 font-bold">0.00</span> บาท</span></li>
                             </ul>
                           </li>
                         </ol>
