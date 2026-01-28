@@ -55,7 +55,8 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PLATFORM_FEES, calculatePrice, type CalculationResult, formatPrice, getPsychologicalPrice, getPlatformCategories } from '@/lib/price-calculation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PLATFORM_FEES, calculatePrice, type CalculationResult, type CalculationInput, formatPrice, getPsychologicalPrice, getPlatformCategories } from '@/lib/price-calculation';
 import { SettingsPanel } from './settings-panel';
 
 
@@ -84,15 +85,16 @@ interface PriceCalculatorProps {
 export default function PriceCalculator({ isStandalone = true }: PriceCalculatorProps) {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [isBreakEvenMode, setIsBreakEvenMode] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      platform: '', 
-      cost: undefined, 
+      platform: '',
+      cost: undefined,
       category: '',
-      otherCosts: [], 
-      profitMargin: undefined, 
+      otherCosts: [],
+      profitMargin: undefined,
       discount: undefined,
       affiliateCommission: undefined,
     },
@@ -103,7 +105,8 @@ export default function PriceCalculator({ isStandalone = true }: PriceCalculator
   });
 
   const selectedPlatform = form.watch('platform');
-  const platformCategories = getPlatformCategories();
+  const allCategories = getPlatformCategories();
+  const platformCategories = selectedPlatform ? allCategories[selectedPlatform] || [] : [];
 
   useEffect(() => {
     form.setValue('category', '');
@@ -117,7 +120,7 @@ export default function PriceCalculator({ isStandalone = true }: PriceCalculator
       const historyDataString = localStorage.getItem(historyKey);
       const today = new Date().toISOString();
       // Omitting platform-specific prices for a cleaner history object
-      const { shopeeCreditCardPrice, shopeeSPayLaterPrice, ...rest} = resultToSave;
+      const { shopeeCreditCardPrice, shopeeSPayLaterPrice, ...rest } = resultToSave;
       const newEntry = { ...rest, date: today };
 
 
@@ -139,177 +142,207 @@ export default function PriceCalculator({ isStandalone = true }: PriceCalculator
     }
   };
 
+  const handleModeChange = (value: string) => {
+    setIsBreakEvenMode(value === 'breakeven');
+    setResult(null); // Clear result when switching modes
+  };
+
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
     setResult(null);
+    setIsBreakEvenMode(false);
     await new Promise((resolve) => setTimeout(resolve, 300));
-    
-    const newResult = calculatePrice(values);
-    
+
+    let finalValues: CalculationInput = { ...values };
+    if (isBreakEvenMode) {
+      finalValues = {
+        ...values,
+        profitMargin: 0,
+        profitAmount: 0,
+        discount: 0,
+        otherCosts: [],
+        affiliateCommission: 0
+      };
+    }
+
+    const newResult = calculatePrice(finalValues);
+
     if (newResult) {
       setResult(newResult);
       saveToHistory(newResult);
     }
-    
+
     setIsLoading(false);
   }
 
+
+
   const handleClear = () => {
+    setIsBreakEvenMode(false);
     form.reset({
-        platform: '', 
-        cost: undefined, 
-        category: '',
-        otherCosts: [],
-        profitMargin: undefined,
-        discount: undefined,
-        affiliateCommission: undefined
+      platform: '',
+      cost: undefined,
+      category: '',
+      otherCosts: [],
+      profitMargin: undefined,
+      discount: undefined,
+      affiliateCommission: undefined
     });
     setResult(null);
   };
-  
+
   const cardContent = (
-      <>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="platform"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>1. เลือกแพลตฟอร์ม</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <Store className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                            <SelectValue placeholder="เลือกแพลตฟอร์ม" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="shopee">Shopee</SelectItem>
-                          <SelectItem value="lazada">Lazada</SelectItem>
-                          <SelectItem value="tiktok shop">TikTok Shop</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                       <FormLabel>2. ประเภท/หมวดหมู่</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatform}>
-                        <FormControl>
-                          <SelectTrigger>
-                             <LayoutGrid className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                            <SelectValue placeholder="เลือกหมวดหมู่สินค้า" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                           {platformCategories[selectedPlatform]?.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                           ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="cost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>3. ราคาต้นทุน</FormLabel>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span>
-                        <FormControl>
-                          <Input type="number" placeholder="กรอกราคาต้นทุน" className="pl-8" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="profitMargin"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>4. กำไรที่ต้องการ (%)</FormLabel>
-                      <div className="relative">
-                        <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <FormControl>
-                          <Input type="number" placeholder="กรอกกำไรที่ต้องการ" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <div className="md:col-span-2 space-y-4">
-                    <FormLabel>5. ค่าใช้จ่ายอื่นๆ (ถ้ามี)</FormLabel>
-                    {fields.map((field, index) => (
-                      <div key={field.id} className="flex items-center gap-2">
-                        <FormField control={form.control} name={`otherCosts.${index}.name`} render={({ field }) => (<FormItem className="flex-grow"><FormControl><Input type="text" placeholder="เช่น ค่าแพ็คของ" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={form.control} name={`otherCosts.${index}.value`} render={({ field }) => (<FormItem><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">฿</span><FormControl><Input type="number" placeholder="0" className="pl-8 w-32" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormMessage /></FormItem>)} />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><XCircle className="h-5 w-5 text-destructive" /></Button>
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', value: undefined })}><PlusCircle className="mr-2 h-4 w-4" />เพิ่มรายการค่าใช้จ่าย</Button>
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Tabs defaultValue="standard" onValueChange={handleModeChange} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="standard">คำนวณแบบบวกกำไร/ค่าใช้จ่าย</TabsTrigger>
+              <TabsTrigger value="breakeven">คำนวณราคาขายเท่าทุน (Break-even)</TabsTrigger>
+            </TabsList>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="platform"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>1. เลือกแพลตฟอร์ม</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <Store className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
+                          <SelectValue placeholder="เลือกแพลตฟอร์ม" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="shopee">Shopee</SelectItem>
+                        <SelectItem value="lazada">Lazada</SelectItem>
+                        <SelectItem value="tiktok shop">TikTok Shop</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>2. หมวดหมู่สินค้า</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedPlatform}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <LayoutGrid className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
+                          <SelectValue placeholder={selectedPlatform ? "เลือกหมวดหมู่" : "กรุณาเลือกแพลตฟอร์มก่อน"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {platformCategories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>3. ต้นทุนสินค้า (บาท)</FormLabel>
+                    <div className="relative">
+                      <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="0.00" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                      </FormControl>
+                    </div>
+                    <FormDescription>ต้นทุนต่อชิ้น (รวมค่าส่งมาที่เราแล้ว)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {!isBreakEvenMode && (
+              <div className="space-y-6 mt-6 pt-6 border-t animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <FormField control={form.control} name="profitMargin" render={({ field }) => (<FormItem><FormLabel>4. กำไรที่ต้องการ (บาท)</FormLabel><div className="relative"><TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกกำไรที่ต้องการ" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>กำไรสุทธิที่ต้องการต่อชิ้น</FormDescription><FormMessage /></FormItem>)} />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="text-base font-semibold">5. ค่าใช้จ่ายอื่นๆ (ต่อชิ้น)</FormLabel>
+                    </div>
+                    <div className="space-y-2">
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="flex gap-2 items-start animate-in fade-in slide-in-from-left-2">
+                          <FormField control={form.control} name={`otherCosts.${index}.name`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input placeholder="ชื่อค่าใช้จ่าย (เช่น ค่าแพ็ค)" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={form.control} name={`otherCosts.${index}.value`} render={({ field }) => (<FormItem className="w-24"><FormControl><Input type="number" placeholder="บาท" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>)} />
+                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="text-destructive hover:text-destructive/90"><XCircle className="h-4 w-4" /></Button>
+                        </div>
+                      ))}
+                      <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: '', value: 0 })}><PlusCircle className="mr-2 h-4 w-4" />เพิ่มรายการค่าใช้จ่าย</Button>
+                    </div>
                   </div>
-                   <FormField control={form.control} name="discount" render={({ field }) => (<FormItem><FormLabel>6. ส่วนลดร้านค้า (บาท)</FormLabel><div className="relative"><BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกส่วนลด" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ส่วนลดที่ร้านค้าเป็นผู้รับผิดชอบทั้งหมด (เช่น คูปองส่วนลดที่ร้านสร้างเอง)</FormDescription><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="discount" render={({ field }) => (<FormItem><FormLabel>6. ส่วนลดร้านค้า (บาท)</FormLabel><div className="relative"><BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกส่วนลด" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ส่วนลดที่ร้านค้าเป็นผู้รับผิดชอบทั้งหมด (เช่น คูปองส่วนลดที่ร้านสร้างเอง)</FormDescription><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="affiliateCommission" render={({ field }) => (<FormItem><FormLabel>7. ค่าคอม Affiliate (%)</FormLabel><div className="relative"><Handshake className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /><FormControl><Input type="number" placeholder="กรอกค่าคอมมิชชั่น" className="pl-10" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl></div><FormDescription>ค่าคอมมิชชั่นที่จะบวกเพิ่มเข้าไปในราคาขาย</FormDescription><FormMessage /></FormItem>)} />
+                </div>
               </div>
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <Button type="button" variant="outline" className="w-full" onClick={handleClear} disabled={!form.formState.isDirty && !result}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    ล้างข้อมูล
-                </Button>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'กำลังคำนวณ...' : 'คำนวณราคา'}
-                </Button>
-              </div>
-            </form>
-          </Form>
-      </>
+            )}
+
+          </Tabs>
+
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <Button type="button" variant="outline" className="w-full" onClick={handleClear} disabled={!form.formState.isDirty && !result}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              ล้างข้อมูล
+            </Button>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'กำลังคำนวณ...' : (isBreakEvenMode ? 'คำนวณราคาเท่าทุน' : 'คำนวณราคาขาย')}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </>
   )
+
 
   const resultDisplay = (
     <>
       {isLoading && (
-         <Card className="mt-8 w-full shadow-lg">
-           <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
-           <CardContent className="space-y-4">
-             <div className="space-y-4">
-               <Skeleton className="h-24 w-full" />
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <Skeleton className="h-24 w-full" />
-                 <Skeleton className="h-24 w-full" />
-               </div>
-             </div>
-           </CardContent>
-         </Card>
+        <Card className="mt-8 w-full shadow-lg">
+          <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
       {result && !isLoading && (
         <div className="space-y-4">
           <Card className="w-full shadow-lg">
-            <CardHeader><CardTitle className="font-headline text-2xl text-center">ผลการคำนวณ</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-headline text-2xl text-center">{isBreakEvenMode ? 'ราคาขายเท่าทุน (Break-even)' : 'ผลการคำนวณ'}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center p-6 bg-muted rounded-lg">
-                <p className="text-sm font-medium text-muted-foreground">ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)</p>
+              <div className={`text-center p-6 rounded-lg ${isBreakEvenMode ? 'bg-orange-50 border-2 border-orange-200' : 'bg-muted'}`}>
+                <p className="text-sm font-medium text-muted-foreground">{isBreakEvenMode ? 'ราคาขั้นต่ำที่ต้องขาย (เพื่อให้ได้ทุนคืน)' : 'ราคาที่ควรตั้งขาย (ก่อนใช้ส่วนลด)'}</p>
                 <p className="text-5xl font-bold text-primary tracking-tight mt-1">
-                    ≈ ฿{getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
+                  ≈ ฿{getPsychologicalPrice(result.sellingPrice).toLocaleString('en-US')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                    (คำนวณจริง: ฿{formatPrice(result.sellingPrice)})
+                  (คำนวณจริง: ฿{formatPrice(result.sellingPrice)})
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม</p><p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(result.platformFeeAmount)}</p><div className="text-xs text-muted-foreground mt-2 space-y-1 text-center"><p>ค่าคอมมิชชั่น: {result.commissionPercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.commissionAmount.toFixed(2)}</p>{result.orderFeeAmount > 0 && (<p>ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.orderFeeAmount.toFixed(2)}</p>)}{result.paymentFeeAmount > 0 && (<p>ค่าธรรมเนียมการชำระเงิน: {result.paymentFeePercent.toFixed(2)}% of ({result.priceForFeeCalculation.toFixed(2)}) = {result.paymentFeeAmount.toFixed(2)}</p>)}</div></div>
+                <div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2 mb-2"><TrendingUp />ค่าธรรมเนียมแพลตฟอร์มรวม</p><p className="text-2xl font-semibold text-foreground text-center">฿{formatPrice(result.platformFeeAmount)}</p><div className="text-xs text-muted-foreground mt-2 space-y-1 text-center"><p>ค่าคอมมิชชั่น + ธุรกรรม (3.21%): {result.commissionPercent.toFixed(2)}% (+VAT) = {result.commissionAmount.toFixed(2)}</p>{result.orderFeeAmount > 0 && (<p>ค่าธรรมเนียมคำสั่งซื้อ: {result.orderFeePercent.toFixed(2)}% = {result.orderFeeAmount.toFixed(2)}</p>)}{result.paymentFeeAmount > 0 && (<p>ค่าธรรมเนียมการชำระเงิน: {result.paymentFeePercent.toFixed(2)}% = {result.paymentFeeAmount.toFixed(2)}</p>)}</div></div>
                 <div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Wallet />กำไรที่จะได้รับ (โดยประมาณ)</p><p className="text-2xl font-semibold text-green-600 mt-1 text-center">฿{formatPrice(result.profit)}</p></div>
               </div>
               {(result.otherCosts > 0 || result.affiliateCommissionAmount > 0) && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{result.otherCosts > 0 && (<div className="p-4 bg-muted rounded-lg"><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Package />ค่าใช้จ่ายอื่นๆ รวม</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">฿{result.otherCosts.toFixed(2)}</p></div>)}{result.affiliateCommissionAmount > 0 && (<div className={`p-4 bg-muted rounded-lg ${result.otherCosts <= 0 ? 'md:col-span-2' : ''}`}><p className="text-sm font-medium text-muted-foreground flex items-center justify-center gap-2"><Handshake />ค่าคอม Affiliate</p><p className="text-2xl font-semibold text-foreground mt-1 text-center">฿{formatPrice(result.affiliateCommissionAmount)}</p></div>)}</div>)}
@@ -348,39 +381,39 @@ export default function PriceCalculator({ isStandalone = true }: PriceCalculator
   );
 
   if (!isStandalone) {
-      return (
-          <div className="w-full space-y-4">
-              {cardContent}
-              {resultDisplay}
-          </div>
-      )
+    return (
+      <div className="w-full space-y-4">
+        {cardContent}
+        {resultDisplay}
+      </div>
+    )
   }
 
   return (
     <div className="w-full max-w-4xl space-y-4">
       <Card className="w-full shadow-lg relative overflow-hidden">
         {isStandalone && (
-            <div className="absolute top-4 right-4 flex items-center gap-2">
-                <Button variant="outline" size="sm" asChild>
-                    <Link href="/notion-table">
-                        <Table className="mr-2 h-4 w-4" />
-                        Notion Table
-                    </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                    <Link href="/history">
-                        <History className="mr-2 h-4 w-4" />
-                        ประวัติ
-                    </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                    <Link href="/docs">
-                        <BookMarked className="mr-2 h-4 w-4" />
-                        คู่มือ
-                    </Link>
-                </Button>
-                <SettingsPanel />
-            </div>
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/notion-table">
+                <Table className="mr-2 h-4 w-4" />
+                Notion Table
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/history">
+                <History className="mr-2 h-4 w-4" />
+                ประวัติ
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/docs">
+                <BookMarked className="mr-2 h-4 w-4" />
+                คู่มือ
+              </Link>
+            </Button>
+            <SettingsPanel />
+          </div>
         )}
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary text-primary-foreground rounded-full w-16 h-16 flex items-center justify-center mb-4">
